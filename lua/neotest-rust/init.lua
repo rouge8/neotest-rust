@@ -43,7 +43,10 @@ local function path_to_test_path(path)
             return path
         end
     else
-        return
+        path = Path:new(path)
+        path = path:make_relative(root .. Path.path.sep .. "tests")
+        path = path:gsub(".rs$", "")
+        return path
     end
 end
 
@@ -72,22 +75,34 @@ function adapter.discover_positions(path)
   (#contains? @macro_name "test" "rstest" "case")
 
 )
-(mod_item name: (identifier) @namespace.name) @namespace.definition
+(mod_item name: (identifier) @namespace.name)? @namespace.definition
     ]]
 
     return lib.treesitter.parse_positions(path, query, {
-        require_namespaces = true,
+        require_namespaces = false,
         position_id = function(position, namespaces)
-            return table.concat(
-                vim.tbl_flatten({
-                    path_to_test_path(path),
-                    vim.tbl_map(function(pos)
-                        return pos.name
-                    end, namespaces),
-                    position.name,
-                }),
-                "::"
-            )
+            if is_unit_test(path) then
+                return table.concat(
+                    vim.tbl_flatten({
+                        path_to_test_path(path),
+                        vim.tbl_map(function(pos)
+                            return pos.name
+                        end, namespaces),
+                        position.name,
+                    }),
+                    "::"
+                )
+            else
+                return table.concat(
+                    vim.tbl_flatten({
+                        vim.tbl_map(function(pos)
+                            return pos.name
+                        end, namespaces),
+                        position.name,
+                    }),
+                    "::"
+                )
+            end
         end,
     })
 end
@@ -106,20 +121,6 @@ function adapter.build_spec(args)
         writer:write('[profile.neotest.junit]\npath = "' .. junit_path .. '"')
     end)
 
-    local position_id
-
-    if position.type == "test" then
-        position_id = position.id
-    elseif position.type == "file" then
-        if is_unit_test(position.path) then
-            position_id = path_to_test_path(position.path) .. "::"
-        end
-        -- main.rs or lib.rs
-        if position_id == nil then
-            position_id = "tests::"
-        end
-    end
-
     local command = {
         "cargo",
         "nextest",
@@ -129,11 +130,27 @@ function adapter.build_spec(args)
         tmp_nextest_config,
         "--profile",
         "neotest",
-        -- TODO: Support rstest parametrized tests
-        "-E 'test(/^"
-            .. position_id
-            .. "/)'",
     }
+
+    if is_integration_test(position.path) then
+        vim.list_extend(command, { "--test", path_to_test_path(position.path) })
+    end
+
+    if position.type == "test" then
+        -- TODO: Support rstest parametrized tests
+        table.insert(command, "-E 'test(/^" .. position.id .. "$/)'")
+    elseif position.type == "file" then
+        if is_unit_test(position.path) then
+            local position_id = path_to_test_path(position.path) .. "::"
+
+            -- main.rs or lib.rs
+            if position_id == nil then
+                position_id = "tests::"
+            end
+
+            table.insert(command, "-E 'test(/^" .. position_id .. "/)'")
+        end
+    end
 
     return {
         command = table.concat(command, " "),
@@ -163,7 +180,7 @@ function adapter.results(spec, result, tree)
 
     local results = {}
 
-    for i, testcase in pairs(testcases) do
+    for _, testcase in pairs(testcases) do
         if testcase.failure then
             results[testcase._attr.name] = {
                 status = "failed",
