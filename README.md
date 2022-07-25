@@ -13,3 +13,7 @@ require("neotest").setup({
   }
 })
 ```
+
+Supports standard library tests, [`rstest`](https://github.com/la10736/rstest),
+Tokio's `[#tokio::test]`, and more. Does not support `rstest`'s parametrized
+tests.
