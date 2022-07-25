@@ -5,7 +5,7 @@ local open = context_manager.open
 local Path = require("plenary.path")
 local with = context_manager.with
 local xml = require("neotest.lib.xml")
-local handler = require("neotest.lib.xml.tree")
+local xml_tree = require("neotest.lib.xml.tree")
 
 local adapter = { name = "neotest-rust" }
 
@@ -106,25 +106,34 @@ function adapter.build_spec(args)
         writer:write('[profile.neotest.junit]\npath = "' .. junit_path .. '"')
     end)
 
-    local command
+    local position_id
 
     if position.type == "test" then
-        command = {
-            "cargo",
-            "nextest",
-            "run",
-            "--config-file",
-            tmp_nextest_config,
-            "--profile",
-            "neotest",
-            -- TODO: Support rstest parametrized tests
-            "-E 'test(/^"
-                .. position.id
-                .. "$/)'",
-        }
+        position_id = position.id
     elseif position.type == "file" then
-        -- TODO: Handle files
+        if is_unit_test(position.path) then
+            position_id = path_to_test_path(position.path) .. "::"
+        end
+        -- main.rs or lib.rs
+        if position_id == nil then
+            position_id = "tests::"
+        end
     end
+
+    local command = {
+        "cargo",
+        "nextest",
+        "run",
+        "--no-fail-fast",
+        "--config-file",
+        tmp_nextest_config,
+        "--profile",
+        "neotest",
+        -- TODO: Support rstest parametrized tests
+        "-E 'test(/^"
+            .. position_id
+            .. "/)'",
+    }
 
     return {
         command = table.concat(command, " "),
@@ -136,27 +145,35 @@ function adapter.build_spec(args)
 end
 
 function adapter.results(spec, result, tree)
-    local success, data = pcall(lib.files.read, spec.context.junit_path)
-    if not success then
-        return {}
+    local data
+    with(open(spec.context.junit_path, "r"), function(reader)
+        data = reader:read("*a")
+    end)
+
+    local handler = xml_tree:new()
+    local parser = xml.parser(handler)
+    parser:parse(data)
+
+    local testcases
+    if #handler.root.testsuites.testsuite.testcase == 0 then
+        testcases = { handler.root.testsuites.testsuite.testcase }
+    else
+        testcases = handler.root.testsuites.testsuite.testcase
     end
 
     local results = {}
 
-    local parser = xml.parser(handler)
-    parser:parse(data)
-
-    -- TODO: Support multiple tests
-    local testcase = handler.root.testsuites.testsuite.testcase
-    if testcase.failure then
-        results[testcase._attr.name] = {
-            status = "failed",
-            short = testcase.failure[1],
-        }
-    else
-        results[testcase._attr.name] = {
-            status = "passed",
-        }
+    for i, testcase in pairs(testcases) do
+        if testcase.failure then
+            results[testcase._attr.name] = {
+                status = "failed",
+                short = testcase.failure[1],
+            }
+        else
+            results[testcase._attr.name] = {
+                status = "passed",
+            }
+        end
     end
 
     return results
