@@ -132,31 +132,35 @@ function adapter.build_spec(args)
         "neotest",
     }
 
+    local integration_test
     if is_integration_test(position.path) then
         vim.list_extend(command, { "--test", path_to_test_path(position.path) })
     end
 
+    local test_filter
     if position.type == "test" then
         -- TODO: Support rstest parametrized tests
-        table.insert(command, "-E 'test(/^" .. position.id .. "$/)'")
+        test_filter = "-E 'test(/^" .. position.id .. "$/)'"
     elseif position.type == "file" then
         if is_unit_test(position.path) then
-            local position_id = path_to_test_path(position.path) .. "::"
+            local position_id = path_to_test_path(position.path)
 
             -- main.rs or lib.rs
             if position_id == nil then
-                position_id = "tests::"
+                position_id = "tests"
             end
 
-            table.insert(command, "-E 'test(/^" .. position_id .. "/)'")
+            test_filter = "-E 'test(/^" .. position_id .. "::/)'"
         end
     end
+    table.insert(command, test_filter)
 
     return {
         command = table.concat(command, " "),
         context = {
             junit_path = junit_path,
             file = position.path,
+            test_filter = test_filter,
         },
     }
 end

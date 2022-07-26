@@ -8,6 +8,20 @@ on:
   pull_request:
 
 jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Prepare dependencies
+        run: |
+          mkdir -p _neovim
+          curl -sL https://github.com/neovim/neovim/releases/download/nightly/nvim-linux64.tar.gz | tar xzf - --strip-components=1 -C "${PWD}/_neovim"
+      - name: Run tests
+        run: |
+          export PATH="${PWD}/_neovim/bin:${PATH}"
+          nvim --version
+          make test
+
   pre-commit:
     runs-on: ubuntu-latest
     steps:

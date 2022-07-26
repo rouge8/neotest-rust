@@ -21,3 +21,19 @@ repos:
     rev: v0.14.1
     hooks:
       - id: stylua
+  - repo: local
+    hooks:
+      - id: shfmt
+        name: shfmt
+        language: golang
+        additional_dependencies: [mvdan.cc/sh/v3/cmd/shfmt@v3.5.1]
+        entry: shfmt
+        args:
+          # indent
+          - -i=2
+          # simplify the code
+          - -s
+          # write result to file instead of stdout
+          - -w
+        types:
+          - shell
