@@ -132,7 +132,6 @@ function adapter.build_spec(args)
         "neotest",
     }
 
-    local integration_test
     if is_integration_test(position.path) then
         vim.list_extend(command, { "--test", path_to_test_path(position.path) })
     end
