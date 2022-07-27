@@ -157,6 +157,7 @@ function adapter.build_spec(args)
 
     return {
         command = table.concat(command, " "),
+        cwd = adapter.root(position.path),
         context = {
             junit_path = junit_path,
             file = position.path,

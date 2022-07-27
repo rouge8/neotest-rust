@@ -246,6 +246,7 @@ describe("build_spec", function()
 
         local spec = plugin.build_spec({ tree = tree })
         assert.equal(spec.context.test_filter, "-E 'test(/^mymod::foo::tests::math$/)'")
+        assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
     end)
 
     it("can run a test file", function()
@@ -259,6 +260,7 @@ describe("build_spec", function()
 
         local spec = plugin.build_spec({ tree = tree })
         assert.equal(spec.context.test_filter, "-E 'test(/^mymod::foo::/)'")
+        assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
     end)
 
     it("can run tests in main.rs", function()
@@ -272,6 +274,7 @@ describe("build_spec", function()
 
         local spec = plugin.build_spec({ tree = tree })
         assert.equal(spec.context.test_filter, "-E 'test(/^tests::/)'")
+        assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
     end)
 
     it("can run tests in lib.rs", function()
@@ -285,6 +288,7 @@ describe("build_spec", function()
 
         local spec = plugin.build_spec({ tree = tree })
         assert.equal(spec.context.test_filter, "-E 'test(/^tests::/)'")
+        assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
     end)
 
     it("can run tests in mod.rs", function()
@@ -298,6 +302,7 @@ describe("build_spec", function()
 
         local spec = plugin.build_spec({ tree = tree })
         assert.equal(spec.context.test_filter, "-E 'test(/^mymod::/)'")
+        assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
     end)
 
     it("can run a single integration test", function()
@@ -311,6 +316,7 @@ describe("build_spec", function()
 
         local spec = plugin.build_spec({ tree = tree })
         assert.equal(spec.context.test_filter, "-E 'test(/^top_level_math$/)'")
+        assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
         assert.matches(".+ %-%-test test_it", spec.command)
     end)
 
@@ -325,6 +331,7 @@ describe("build_spec", function()
 
         local spec = plugin.build_spec({ tree = tree })
         assert.equal(spec.context.test_filter, nil)
+        assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
         assert.matches(".+ %-%-test test_it", spec.command)
     end)
 end)
