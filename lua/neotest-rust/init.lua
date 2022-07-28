@@ -108,8 +108,8 @@ function adapter.discover_positions(path)
 end
 
 function adapter.build_spec(args)
-    local tmp_nextest_config = async.fn.tempname()
-    local junit_path = async.fn.tempname()
+    local tmp_nextest_config = async.fn.tempname() .. ".nextest.toml"
+    local junit_path = async.fn.tempname() .. ".junit.xml"
     local position = args.tree:data()
 
     local nextest_config = Path:new(adapter.root(position.path) .. ".config/nextest.toml")
