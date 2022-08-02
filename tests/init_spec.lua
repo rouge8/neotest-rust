@@ -10,13 +10,13 @@ end)
 
 describe("discover_positions", function()
     async.it("discovers positions in unit tests in main.rs", function()
-        local positions = plugin.discover_positions("tests/data/src/main.rs"):to_list()
+        local positions = plugin.discover_positions(vim.loop.cwd() .. "/tests/data/src/main.rs"):to_list()
 
         local expected_positions = {
             {
-                id = "tests/data/src/main.rs",
+                id = vim.loop.cwd() .. "/tests/data/src/main.rs",
                 name = "main.rs",
-                path = "tests/data/src/main.rs",
+                path = vim.loop.cwd() .. "/tests/data/src/main.rs",
                 range = { 0, 0, 25, 0 },
                 type = "file",
             },
@@ -24,7 +24,7 @@ describe("discover_positions", function()
                 {
                     id = "tests",
                     name = "tests",
-                    path = "tests/data/src/main.rs",
+                    path = vim.loop.cwd() .. "/tests/data/src/main.rs",
                     range = { 7, 0, 24, 1 },
                     type = "namespace",
                 },
@@ -32,7 +32,7 @@ describe("discover_positions", function()
                     {
                         id = "tests::basic_math",
                         name = "basic_math",
-                        path = "tests/data/src/main.rs",
+                        path = vim.loop.cwd() .. "/tests/data/src/main.rs",
                         range = { 9, 4, 11, 5 },
                         type = "test",
                     },
@@ -41,7 +41,7 @@ describe("discover_positions", function()
                     {
                         id = "tests::failed_math",
                         name = "failed_math",
-                        path = "tests/data/src/main.rs",
+                        path = vim.loop.cwd() .. "/tests/data/src/main.rs",
                         range = { 14, 4, 16, 5 },
                         type = "test",
                     },
@@ -50,7 +50,7 @@ describe("discover_positions", function()
                     {
                         id = "tests::nested",
                         name = "nested",
-                        path = "tests/data/src/main.rs",
+                        path = vim.loop.cwd() .. "/tests/data/src/main.rs",
                         range = { 18, 4, 23, 5 },
                         type = "namespace",
                     },
@@ -58,7 +58,7 @@ describe("discover_positions", function()
                         {
                             id = "tests::nested::nested_math",
                             name = "nested_math",
-                            path = "tests/data/src/main.rs",
+                            path = vim.loop.cwd() .. "/tests/data/src/main.rs",
                             range = { 20, 8, 22, 9 },
                             type = "test",
                         },
@@ -71,13 +71,13 @@ describe("discover_positions", function()
     end)
 
     async.it("discovers positions in unit tests in lib.rs", function()
-        local positions = plugin.discover_positions("tests/data/src/lib.rs"):to_list()
+        local positions = plugin.discover_positions(vim.loop.cwd() .. "/tests/data/src/lib.rs"):to_list()
 
         local expected_positions = {
             {
-                id = "tests/data/src/lib.rs",
+                id = vim.loop.cwd() .. "/tests/data/src/lib.rs",
                 name = "lib.rs",
-                path = "tests/data/src/lib.rs",
+                path = vim.loop.cwd() .. "/tests/data/src/lib.rs",
                 range = { 0, 0, 7, 0 },
                 type = "file",
             },
@@ -85,7 +85,7 @@ describe("discover_positions", function()
                 {
                     id = "tests",
                     name = "tests",
-                    path = "tests/data/src/lib.rs",
+                    path = vim.loop.cwd() .. "/tests/data/src/lib.rs",
                     range = { 1, 0, 6, 1 },
                     type = "namespace",
                 },
@@ -93,7 +93,7 @@ describe("discover_positions", function()
                     {
                         id = "tests::math",
                         name = "math",
-                        path = "tests/data/src/lib.rs",
+                        path = vim.loop.cwd() .. "/tests/data/src/lib.rs",
                         range = { 3, 4, 5, 5 },
                         type = "test",
                     },
@@ -105,29 +105,29 @@ describe("discover_positions", function()
     end)
 
     async.it("discovers positions in unit tests in mod.rs", function()
-        local positions = plugin.discover_positions("tests/data/src/mymod/mod.rs"):to_list()
+        local positions = plugin.discover_positions(vim.loop.cwd() .. "/tests/data/src/mymod/mod.rs"):to_list()
 
         local expected_positions = {
             {
-                id = "tests/data/src/mymod/mod.rs",
+                id = vim.loop.cwd() .. "/tests/data/src/mymod/mod.rs",
                 name = "mod.rs",
-                path = "tests/data/src/mymod/mod.rs",
+                path = vim.loop.cwd() .. "/tests/data/src/mymod/mod.rs",
                 range = { 0, 0, 9, 0 },
                 type = "file",
             },
             {
                 {
-                    id = "tests",
+                    id = "mymod::tests",
                     name = "tests",
-                    path = "tests/data/src/mymod/mod.rs",
+                    path = vim.loop.cwd() .. "/tests/data/src/mymod/mod.rs",
                     range = { 3, 0, 8, 1 },
                     type = "namespace",
                 },
                 {
                     {
-                        id = "tests::math",
+                        id = "mymod::tests::math",
                         name = "math",
-                        path = "tests/data/src/mymod/mod.rs",
+                        path = vim.loop.cwd() .. "/tests/data/src/mymod/mod.rs",
                         range = { 5, 4, 7, 5 },
                         type = "test",
                     },
@@ -139,29 +139,29 @@ describe("discover_positions", function()
     end)
 
     async.it("discovers positions in unit tests in a regular Rust file", function()
-        local positions = plugin.discover_positions("tests/data/src/mymod/foo.rs"):to_list()
+        local positions = plugin.discover_positions(vim.loop.cwd() .. "/tests/data/src/mymod/foo.rs"):to_list()
 
         local expected_positions = {
             {
-                id = "tests/data/src/mymod/foo.rs",
+                id = vim.loop.cwd() .. "/tests/data/src/mymod/foo.rs",
                 name = "foo.rs",
-                path = "tests/data/src/mymod/foo.rs",
+                path = vim.loop.cwd() .. "/tests/data/src/mymod/foo.rs",
                 range = { 0, 0, 7, 0 },
                 type = "file",
             },
             {
                 {
-                    id = "tests",
+                    id = "mymod::foo::tests",
                     name = "tests",
-                    path = "tests/data/src/mymod/foo.rs",
+                    path = vim.loop.cwd() .. "/tests/data/src/mymod/foo.rs",
                     range = { 1, 0, 6, 1 },
                     type = "namespace",
                 },
                 {
                     {
-                        id = "tests::math",
+                        id = "mymod::foo::tests::math",
                         name = "math",
-                        path = "tests/data/src/mymod/foo.rs",
+                        path = vim.loop.cwd() .. "/tests/data/src/mymod/foo.rs",
                         range = { 3, 4, 5, 5 },
                         type = "test",
                     },
@@ -173,13 +173,13 @@ describe("discover_positions", function()
     end)
 
     async.it("discovers positions in integration tests", function()
-        local positions = plugin.discover_positions("tests/data/tests/test_it.rs"):to_list()
+        local positions = plugin.discover_positions(vim.loop.cwd() .. "/tests/data/tests/test_it.rs"):to_list()
 
         local expected_positions = {
             {
-                id = "tests/data/tests/test_it.rs",
+                id = vim.loop.cwd() .. "/tests/data/tests/test_it.rs",
                 name = "test_it.rs",
-                path = "tests/data/tests/test_it.rs",
+                path = vim.loop.cwd() .. "/tests/data/tests/test_it.rs",
                 range = { 0, 0, 18, 0 },
                 type = "file",
             },
@@ -187,7 +187,7 @@ describe("discover_positions", function()
                 {
                     id = "top_level_math",
                     name = "top_level_math",
-                    path = "tests/data/tests/test_it.rs",
+                    path = vim.loop.cwd() .. "/tests/data/tests/test_it.rs",
                     range = { 1, 0, 3, 1 },
                     type = "test",
                 },
@@ -196,7 +196,7 @@ describe("discover_positions", function()
                 {
                     id = "nested",
                     name = "nested",
-                    path = "tests/data/tests/test_it.rs",
+                    path = vim.loop.cwd() .. "/tests/data/tests/test_it.rs",
                     range = { 5, 0, 17, 1 },
                     type = "namespace",
                 },
@@ -204,7 +204,7 @@ describe("discover_positions", function()
                     {
                         id = "nested::nested_math",
                         name = "nested_math",
-                        path = "tests/data/tests/test_it.rs",
+                        path = vim.loop.cwd() .. "/tests/data/tests/test_it.rs",
                         range = { 7, 4, 9, 5 },
                         type = "test",
                     },
@@ -213,7 +213,7 @@ describe("discover_positions", function()
                     {
                         id = "nested::extra_nested",
                         name = "extra_nested",
-                        path = "tests/data/tests/test_it.rs",
+                        path = vim.loop.cwd() .. "/tests/data/tests/test_it.rs",
                         range = { 11, 4, 16, 5 },
                         type = "namespace",
                     },
@@ -221,7 +221,7 @@ describe("discover_positions", function()
                         {
                             id = "nested::extra_nested::extra_nested_math",
                             name = "extra_nested_math",
-                            path = "tests/data/tests/test_it.rs",
+                            path = vim.loop.cwd() .. "/tests/data/tests/test_it.rs",
                             range = { 13, 8, 15, 9 },
                             type = "test",
                         },
