@@ -25,29 +25,48 @@ end
 
 local function path_to_test_path(path)
     local root = adapter.root(path)
-    if is_unit_test(path) then
-        -- main.rs, lib.rs, and mod.rs aren't part of the test name
-        for _, filename in ipairs({ "main", "lib", "mod" }) do
-            path = path:gsub(Path.path.sep .. filename .. ".rs$", "")
-        end
+    -- main.rs, lib.rs, and mod.rs aren't part of the test name
+    for _, filename in ipairs({ "main", "lib", "mod" }) do
+        path = path:gsub(filename .. ".rs$", "")
+    end
 
+    -- Trim '.rs'
+    path = path:gsub(".rs$", "")
+
+    if is_unit_test(path) then
         path = Path:new(path)
         path = path:make_relative(root .. Path.path.sep .. "src")
-        path = path:gsub(Path.path.sep, "::"):gsub(".rs$", "")
-
-        -- If the file was main.rs, lib.rs, or mod.rs, the relative path will
-        -- be "." after we strip the filename.
-        if path == "." then
-            return nil
-        else
-            return path
-        end
     else
         path = Path:new(path)
         path = path:make_relative(root .. Path.path.sep .. "tests")
-        path = path:gsub(".rs$", "")
+        -- Remove the first component of the path of an integration test in a
+        -- subdirectory, e.g. 'testsuite/foo/bar.rs' becomes 'foo/bar.rs'
+        if path:find(Path.path.sep) then
+            path = path:gsub("^.+" .. Path.path.sep, "")
+        else
+            return nil
+        end
+    end
+
+    -- Replace separators with '::'
+    path = path:gsub(Path.path.sep, "::")
+
+    -- If the file was main.rs, lib.rs, or mod.rs, the relative path will
+    -- be "." after we strip the filename.
+    if path == "." then
+        return nil
+    else
         return path
     end
+end
+
+local function integration_test_name(path)
+    local root = adapter.root(path)
+
+    path = Path:new(path)
+    path = path:make_relative(root .. Path.path.sep .. "tests")
+    path = path:gsub(".rs$", "")
+    return vim.split(path, "/")[1]
 end
 
 function adapter.discover_positions(path)
@@ -81,28 +100,16 @@ function adapter.discover_positions(path)
     return lib.treesitter.parse_positions(path, query, {
         require_namespaces = false,
         position_id = function(position, namespaces)
-            if is_unit_test(path) then
-                return table.concat(
-                    vim.tbl_flatten({
-                        path_to_test_path(path),
-                        vim.tbl_map(function(pos)
-                            return pos.name
-                        end, namespaces),
-                        position.name,
-                    }),
-                    "::"
-                )
-            else
-                return table.concat(
-                    vim.tbl_flatten({
-                        vim.tbl_map(function(pos)
-                            return pos.name
-                        end, namespaces),
-                        position.name,
-                    }),
-                    "::"
-                )
-            end
+            return table.concat(
+                vim.tbl_flatten({
+                    path_to_test_path(path),
+                    vim.tbl_map(function(pos)
+                        return pos.name
+                    end, namespaces),
+                    position.name,
+                }),
+                "::"
+            )
         end,
     })
 end
@@ -133,7 +140,7 @@ function adapter.build_spec(args)
     }
 
     if is_integration_test(position.path) then
-        vim.list_extend(command, { "--test", path_to_test_path(position.path) })
+        vim.list_extend(command, { "--test", integration_test_name(position.path) })
     end
 
     local test_filter
@@ -141,14 +148,15 @@ function adapter.build_spec(args)
         -- TODO: Support rstest parametrized tests
         test_filter = "-E 'test(/^" .. position.id .. "$/)'"
     elseif position.type == "file" then
-        if is_unit_test(position.path) then
-            local position_id = path_to_test_path(position.path)
+        local position_id = path_to_test_path(position.path)
 
+        if is_unit_test(position.path) and position_id == nil then
             -- main.rs or lib.rs
-            if position_id == nil then
-                position_id = "tests"
-            end
+            position_id = "tests"
+        end
 
+        if position_id then
+            -- Either a unit test or an integration test in a subdirectory
             test_filter = "-E 'test(/^" .. position_id .. "::/)'"
         end
     end

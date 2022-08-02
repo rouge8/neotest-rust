@@ -232,6 +232,56 @@ describe("discover_positions", function()
 
         assert.are.same(positions, expected_positions)
     end)
+
+    async.it("discovers positions in main.rs in a subdirectory of integration tests", function()
+        local positions = plugin.discover_positions(vim.loop.cwd() .. "/tests/data/tests/testsuite/main.rs"):to_list()
+
+        local expected_positions = {
+            {
+                id = vim.loop.cwd() .. "/tests/data/tests/testsuite/main.rs",
+                name = "main.rs",
+                path = vim.loop.cwd() .. "/tests/data/tests/testsuite/main.rs",
+                range = { 0, 0, 6, 0 },
+                type = "file",
+            },
+            {
+                {
+                    id = "testsuite_top_level_math",
+                    name = "testsuite_top_level_math",
+                    path = vim.loop.cwd() .. "/tests/data/tests/testsuite/main.rs",
+                    range = { 3, 0, 5, 1 },
+                    type = "test",
+                },
+            },
+        }
+
+        assert.are.same(positions, expected_positions)
+    end)
+
+    async.it("discovers positions in a test file in a subdirectory of integration tests", function()
+        local positions = plugin.discover_positions(vim.loop.cwd() .. "/tests/data/tests/testsuite/it.rs"):to_list()
+
+        local expected_positions = {
+            {
+                id = vim.loop.cwd() .. "/tests/data/tests/testsuite/it.rs",
+                name = "it.rs",
+                path = vim.loop.cwd() .. "/tests/data/tests/testsuite/it.rs",
+                range = { 0, 0, 4, 0 },
+                type = "file",
+            },
+            {
+                {
+                    id = "it::testsuite_it_math",
+                    name = "testsuite_it_math",
+                    path = vim.loop.cwd() .. "/tests/data/tests/testsuite/it.rs",
+                    range = { 1, 0, 3, 1 },
+                    type = "test",
+                },
+            },
+        }
+
+        assert.are.same(positions, expected_positions)
+    end)
 end)
 
 describe("build_spec", function()
@@ -333,5 +383,65 @@ describe("build_spec", function()
         assert.equal(spec.context.test_filter, nil)
         assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
         assert.matches(".+ %-%-test test_it", spec.command)
+    end)
+
+    it("can run an integration test in main.rs in a subdirectory", function()
+        local tree = Tree:new({
+            type = "test",
+            path = vim.loop.cwd() .. "/tests/data/tests/testsuite/main.rs",
+            id = "testsuite_top_level_math",
+        }, {}, function(data)
+            return data
+        end, {})
+
+        local spec = plugin.build_spec({ tree = tree })
+        assert.equal(spec.context.test_filter, "-E 'test(/^testsuite_top_level_math$/)'")
+        assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
+        assert.matches(".+ %-%-test testsuite ", spec.command)
+    end)
+
+    it("can run all integration tests in main.rs in a subdirectory", function()
+        local tree = Tree:new({
+            type = "file",
+            path = vim.loop.cwd() .. "/tests/data/tests/testsuite/main.rs",
+            id = vim.loop.cwd() .. "/tests/data/src/tests/testsuite/main.rs",
+        }, {}, function(data)
+            return data
+        end, {})
+
+        local spec = plugin.build_spec({ tree = tree })
+        assert.equal(spec.context.test_filter, nil)
+        assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
+        assert.matches(".+ %-%-test testsuite$", spec.command)
+    end)
+
+    it("can run an integration test in another test file in a subdirectory", function()
+        local tree = Tree:new({
+            type = "test",
+            path = vim.loop.cwd() .. "/tests/data/tests/testsuite/it.rs",
+            id = "it::testsuite_it_math",
+        }, {}, function(data)
+            return data
+        end, {})
+
+        local spec = plugin.build_spec({ tree = tree })
+        assert.equal(spec.context.test_filter, "-E 'test(/^it::testsuite_it_math$/)'")
+        assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
+        assert.matches(".+ %-%-test testsuite ", spec.command)
+    end)
+
+    it("can run all integration tests in another test file in a subdirectory", function()
+        local tree = Tree:new({
+            type = "file",
+            path = vim.loop.cwd() .. "/tests/data/tests/testsuite/it.rs",
+            id = "it::",
+        }, {}, function(data)
+            return data
+        end, {})
+
+        local spec = plugin.build_spec({ tree = tree })
+        assert.equal(spec.context.test_filter, "-E 'test(/^it::/)'")
+        assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
+        assert.matches(".+ %-%-test testsuite ", spec.command)
     end)
 end)
