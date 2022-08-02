@@ -1,3 +1,5 @@
+mod mymod;
+
 fn main() {
     println!("Hello, world!");
 }
