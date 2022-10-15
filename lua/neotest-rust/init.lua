@@ -179,7 +179,7 @@ function adapter.results(spec, result, tree)
         data = reader:read("*a")
     end)
 
-    local handler = xml_tree:new()
+    local handler = xml_tree()
     local parser = xml.parser(handler)
     parser:parse(data)
 
