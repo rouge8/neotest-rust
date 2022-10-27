@@ -444,4 +444,27 @@ describe("build_spec", function()
         assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
         assert.matches(".+ %-%-test testsuite ", spec.command)
     end)
+
+    it("can add args for command", function()
+        local adapter = require("neotest-rust")({
+            args = {
+                "--no-capture",
+                "--test-threads",
+                3,
+            },
+        })
+        local tree = Tree:new({
+            type = "test",
+            path = vim.loop.cwd() .. "/tests/data/tests/test_it.rs",
+            id = "top_level_math",
+        }, {}, function(data)
+            return data
+        end, {})
+
+        local spec = adapter.build_spec({ tree = tree })
+        assert.matches(
+            "cargo nextest run %-%-no%-fail%-fast %-%-config%-file %g+ %-%-profile neotest %-%-no%-capture %-%-test%-threads 3 %-%-test test_it ",
+            spec.command
+        )
+    end)
 end)
