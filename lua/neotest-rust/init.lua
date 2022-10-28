@@ -11,6 +11,14 @@ local adapter = { name = "neotest-rust" }
 
 adapter.root = lib.files.match_root_pattern("Cargo.toml")
 
+local get_args = function()
+    return {}
+end
+
+local is_callable = function(obj)
+    return type(obj) == "function" or (type(obj) == "table" and obj.__call)
+end
+
 function adapter.is_test_file(file_path)
     return vim.endswith(file_path, ".rs")
 end
@@ -128,7 +136,7 @@ function adapter.build_spec(args)
         writer:write('[profile.neotest.junit]\npath = "' .. junit_path .. '"')
     end)
 
-    local command = {
+    local command = vim.tbl_flatten({
         "cargo",
         "nextest",
         "run",
@@ -137,7 +145,8 @@ function adapter.build_spec(args)
         tmp_nextest_config,
         "--profile",
         "neotest",
-    }
+        vim.list_extend(get_args(), args.extra_args or {}),
+    })
 
     if is_integration_test(position.path) then
         vim.list_extend(command, { "--test", integration_test_name(position.path) })
@@ -210,6 +219,13 @@ end
 
 setmetatable(adapter, {
     __call = function(_, opts)
+        if is_callable(opts.args) then
+            get_args = opts.args
+        elseif opts.args then
+            get_args = function()
+                return opts.args
+            end
+        end
         return adapter
     end,
 })
