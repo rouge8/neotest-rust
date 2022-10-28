@@ -14,6 +14,19 @@ require("neotest").setup({
 })
 ```
 
+If you wish to give additional arguments to the `cargo nextest`,
+you can specify the args when initializing the adapter.
+
+```lua
+require("neotest").setup({
+  adapters = {
+    require("neotest-rust") {
+        args = { "--no-capture" },
+    }
+  }
+})
+```
+
 Supports standard library tests, [`rstest`](https://github.com/la10736/rstest),
 Tokio's `[#tokio::test]`, and more. Does not support `rstest`'s parametrized
 tests.
