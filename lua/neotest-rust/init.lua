@@ -82,10 +82,10 @@ function adapter.discover_positions(path)
 (
   (attribute_item
     [
-      (meta_item
+      (attribute
         (identifier) @macro_name
       )
-      (attr_item
+      (attribute
         [
 	  (identifier) @macro_name
 	  (scoped_identifier
