@@ -1,5 +1,6 @@
 local async = require("neotest.async")
 local context_manager = require("plenary.context_manager")
+local dap = require("neotest-rust.dap")
 local lib = require("neotest.lib")
 local open = context_manager.open
 local Path = require("plenary.path")
@@ -78,6 +79,7 @@ local function integration_test_name(path)
 end
 
 function adapter.discover_positions(path)
+
     local query = [[
 (
   (attribute_item
@@ -171,22 +173,41 @@ function adapter.build_spec(args)
     end
     table.insert(command, test_filter)
 
+	local cwd = adapter.root(position.path)
+	local strategy = {}
+
+	if args.strategy == "dap" then
+		strategy, command, test_filter =
+			dap.resolve_strategy(
+				position.id,
+				cwd
+			)
+	end
+
     return {
         command = table.concat(command, " "),
-        cwd = adapter.root(position.path),
+        cwd = cwd,
         context = {
             junit_path = junit_path,
             file = position.path,
             test_filter = test_filter,
+			testcase = position.id,
         },
+		strategy = strategy,
     }
 end
 
 function adapter.results(spec, result, tree)
     local data
-    with(open(spec.context.junit_path, "r"), function(reader)
-        data = reader:read("*a")
-    end)
+
+	local junit_path = spec.context.junit_path
+	if dap.test_file(junit_path) then
+		with(open(junit_path, "r"), function(reader)
+			data = reader:read("*a")
+		end)
+	else
+		data = dap.translate_results(junit_path, spec.context.testcase)
+	end
 
     local handler = xml_tree()
     local parser = xml.parser(handler)
