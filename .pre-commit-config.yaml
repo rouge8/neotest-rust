@@ -18,7 +18,7 @@ repos:
       - id: check-json
       - id: check-toml
   - repo: https://github.com/JohnnyMorganz/StyLua
-    rev: v0.15.2
+    rev: v0.15.3
     hooks:
       - id: stylua
   - repo: local
