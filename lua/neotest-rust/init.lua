@@ -192,25 +192,32 @@ function adapter.results(spec, result, tree)
     local parser = xml.parser(handler)
     parser:parse(data)
 
-    local testcases
-    if #handler.root.testsuites.testsuite.testcase == 0 then
-        testcases = { handler.root.testsuites.testsuite.testcase }
-    else
-        testcases = handler.root.testsuites.testsuite.testcase
-    end
-
     local results = {}
 
-    for _, testcase in pairs(testcases) do
-        if testcase.failure then
-            results[testcase._attr.name] = {
-                status = "failed",
-                short = testcase.failure[1],
-            }
+    local testsuites
+    if #handler.root.testsuites.testsuite == 0 then
+        testsuites = {handler.root.testsuites.testsuite}
+    else
+        testsuites = handler.root.testsuites.testsuite
+    end
+    for _, testsuite in pairs(testsuites) do
+        local testcases
+        if #testsuite.testcase == 0 then
+            testcases = { testsuite.testcase }
         else
-            results[testcase._attr.name] = {
-                status = "passed",
-            }
+            testcases = testsuite.testcase
+        end
+        for _, testcase in pairs(testcases) do
+            if testcase.failure then
+                results[testcase._attr.name] = {
+                    status = "failed",
+                    short = testcase.failure[1],
+                }
+            else
+                results[testcase._attr.name] = {
+                    status = "passed",
+                }
+            end
         end
     end
 
