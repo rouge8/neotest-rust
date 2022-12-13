@@ -20,7 +20,7 @@ local is_callable = function(obj)
 end
 
 function adapter.is_test_file(file_path)
-    return vim.endswith(file_path, ".rs")
+    return vim.endswith(file_path, ".rs") and #adapter.discover_positions(file_path):to_list() ~= 1
 end
 
 local function is_unit_test(path)
