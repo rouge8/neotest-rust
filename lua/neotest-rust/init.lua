@@ -5,7 +5,6 @@ local open = context_manager.open
 local Path = require("plenary.path")
 local with = context_manager.with
 local xml = require("neotest.lib.xml")
-local xml_tree = require("neotest.lib.xml.tree")
 
 local adapter = { name = "neotest-rust" }
 
@@ -188,17 +187,15 @@ function adapter.results(spec, result, tree)
         data = reader:read("*a")
     end)
 
-    local handler = xml_tree()
-    local parser = xml.parser(handler)
-    parser:parse(data)
+    local root = xml.parse(data)
 
     local results = {}
 
     local testsuites
-    if #handler.root.testsuites.testsuite == 0 then
-        testsuites = {handler.root.testsuites.testsuite}
+    if #root.testsuites.testsuite == 0 then
+        testsuites = {root.testsuites.testsuite}
     else
-        testsuites = handler.root.testsuites.testsuite
+        testsuites = root.testsuites.testsuite
     end
     for _, testsuite in pairs(testsuites) do
         local testcases
