@@ -150,7 +150,8 @@ function adapter.build_spec(args)
         vim.list_extend(get_args(), args.extra_args or {}),
     })
 
-    if is_integration_test(position.path) then
+	local integration_test = is_integration_test(position.path)
+    if integration_test then
         vim.list_extend(command, { "--test", integration_test_name(position.path) })
     end
 
@@ -179,8 +180,9 @@ function adapter.build_spec(args)
 	if args.strategy == "dap" then
 		strategy, command, test_filter =
 			dap.resolve_strategy(
-				position.id,
-				cwd
+				position,
+				cwd,
+				integration_test
 			)
 	end
 
@@ -191,7 +193,6 @@ function adapter.build_spec(args)
             junit_path = junit_path,
             file = position.path,
             test_filter = test_filter,
-			testcase = position.id,
         },
 		strategy = strategy,
     }
@@ -206,7 +207,7 @@ function adapter.results(spec, result, tree)
 			data = reader:read("*a")
 		end)
 	else
-		data = dap.translate_results(junit_path, spec.context.testcase)
+		return dap.translate_results(junit_path)
 	end
 
     local handler = xml_tree()
