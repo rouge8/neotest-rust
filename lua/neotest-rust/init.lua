@@ -193,7 +193,7 @@ function adapter.results(spec, result, tree)
 
     local testsuites
     if #root.testsuites.testsuite == 0 then
-        testsuites = {root.testsuites.testsuite}
+        testsuites = { root.testsuites.testsuite }
     else
         testsuites = root.testsuites.testsuite
     end
