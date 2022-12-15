@@ -89,9 +89,9 @@ function adapter.discover_positions(path)
       )
       (attribute
         [
-	  (identifier) @macro_name
-	  (scoped_identifier
-	    name: (identifier) @macro_name
+      (identifier) @macro_name
+      (scoped_identifier
+        name: (identifier) @macro_name
           )
         ]
       )
@@ -150,7 +150,7 @@ function adapter.build_spec(args)
         vim.list_extend(get_args(), args.extra_args or {}),
     })
 
-	local integration_test = is_integration_test(position.path)
+    local integration_test = is_integration_test(position.path)
     if integration_test then
         vim.list_extend(command, { "--test", integration_test_name(position.path) })
     end
@@ -174,41 +174,44 @@ function adapter.build_spec(args)
     end
     table.insert(command, test_filter)
 
-	local cwd = adapter.root(position.path)
-	local strategy = {}
+    local cwd = adapter.root(position.path)
 
-	if args.strategy == "dap" then
-		strategy, command, test_filter =
-			dap.resolve_strategy(
-				position,
-				cwd,
-				integration_test
-			)
-	end
+	local context = {
+		junit_path = junit_path,
+		file = position.path,
+		test_filter = test_filter,
+		integration_test = integration_test,
+	}
 
+    -- Debug
+    if args.strategy == "dap" then
+        return
+            dap.resolve_strategy(
+                position,
+                cwd,
+                context
+            )
+    end
+
+    -- Run
     return {
         command = table.concat(command, " "),
         cwd = cwd,
-        context = {
-            junit_path = junit_path,
-            file = position.path,
-            test_filter = test_filter,
-        },
-		strategy = strategy,
+        context = context,
     }
 end
 
 function adapter.results(spec, result, tree)
     local data
 
-	local junit_path = spec.context.junit_path
-	if dap.test_file(junit_path) then
-		with(open(junit_path, "r"), function(reader)
-			data = reader:read("*a")
-		end)
-	else
-		return dap.translate_results(junit_path)
-	end
+    local junit_path = spec.context.junit_path
+    if dap.test_file(junit_path) then
+        with(open(junit_path, "r"), function(reader)
+            data = reader:read("*a")
+        end)
+    else
+        return dap.translate_results(junit_path)
+    end
 
     local handler = xml_tree()
     local parser = xml.parser(handler)

@@ -1,12 +1,19 @@
 local M = {}
 
-local function get_test_binary(test_directory)
+-- Debugging from cargo is not possible
+-- Get the name of the binary containing the test in target/debug/ 
+local function get_test_binary(integration_test)
+
+    local test_directory = 'src'
+    if integration_test then
+        test_directory = 'tests'
+    end
 
     local cmd = "cargo test --no-run --message-format=JSON"
     local handle = assert(io.popen(cmd))
 
-	local sep = require("plenary.path").path.sep
-	local filter = '"src_path":".+' .. sep .. test_directory .. sep .. '.+.rs",'
+    local sep = require("plenary.path").path.sep
+    local filter = '"src_path":".+' .. sep .. test_directory .. sep .. '.+.rs",'
 
     local line = handle:read("l")
     while line do
@@ -33,21 +40,16 @@ local function get_test_binary(test_directory)
     return nil
 end
 
-M.resolve_strategy = function(position, cwd, integration_test)
+-- Modify the build spec to use the test binary
+M.resolve_strategy = function(position, cwd, context)
 
-    local test_filter
+   	local test_filter
 
     for s in string.gmatch(position.id, "([^::]+)") do
         test_filter = s
     end
 
-	local test_directory = 'src'
-	if integration_test then
-		test_directory = 'tests'
-	end
-
-    local command = {
-        get_test_binary(test_directory),
+    local args = {
         "--nocapture",
         "--test",
         test_filter,
@@ -57,15 +59,17 @@ M.resolve_strategy = function(position, cwd, integration_test)
         name = "Debug Rust Tests",
         type = "lldb",
         request = "launch",
-        program = command[1],
+        program = get_test_binary(context.integration_test),
         cwd = cwd or "${workspaceFolder}",
         stopOnEntry = false,
-        args = { unpack(command, 2) },
+        args = args,
     }
 
-    test_filter = "--nocapture --test " .. test_filter
-
-    return strategy, command, test_filter
+    return {
+        cwd = cwd,
+        context = context,
+        strategy = strategy,
+	}
 end
 
 M.test_file = function(file)
@@ -90,15 +94,16 @@ local function get_results_file(junit_path)
     return tmp_dir .. tmp_file
 end
 
+-- Translate plain test output to a neotest results object
 M.translate_results = function(junit_path)
 
-	local result_map = {
-		ok = "passed",
-		FAILED = "failed",
-		ignored ="skipped",
-	}
+    local result_map = {
+        ok = "passed",
+        FAILED = "failed",
+        ignored ="skipped",
+    }
 
-	local results = {}
+    local results = {}
     local results_file = get_results_file(junit_path)
 
     local handle = assert(io.open(results_file))
@@ -106,15 +111,15 @@ M.translate_results = function(junit_path)
 
     while line do
 
-		if string.find(line, '^test result:') then
-			--
-		elseif string.find(line, '^test .+ %.%.%. %w+') then
+        if string.find(line, '^test result:') then
+            --
+        elseif string.find(line, '^test .+ %.%.%. %w+') then
 
-			local test_name, cargo_result =
-				string.match(line, '^test (.+) %.%.%. (%w+)')
+            local test_name, cargo_result =
+                string.match(line, '^test (.+) %.%.%. (%w+)')
 
-			-- TODO: Short for failures
-			results[test_name] = { status = assert(result_map[cargo_result]) }
+            -- TODO: Short for failures
+            results[test_name] = { status = assert(result_map[cargo_result]) }
         end
 
         line = handle:read("l")
@@ -124,7 +129,7 @@ M.translate_results = function(junit_path)
         handle:close()
     end
 
-	return results
+    return results
 end
 
 return M
