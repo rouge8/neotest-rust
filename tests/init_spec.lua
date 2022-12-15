@@ -3,8 +3,16 @@ local plugin = require("neotest-rust")
 local Tree = require("neotest.types").Tree
 
 describe("is_test_file", function()
-    it("matches Rust files", function()
-        assert.equals(true, plugin.is_test_file("foo.rs"))
+    it("matches Rust files with tests in them", function()
+        assert.equals(true, plugin.is_test_file(vim.loop.cwd() .. "/tests/data/src/mymod/foo.rs"))
+    end)
+
+    it("doesn't discover non-Rust files", function()
+        assert.equals(false, plugin.is_test_file(vim.loop.cwd() .. "/tests/data/Cargo.toml"))
+    end)
+
+    it("doesn't discover Rust file without tests in it", function()
+        assert.equals(false, plugin.is_test_file(vim.loop.cwd() .. "/tests/data/src/mymod/notests.rs"))
     end)
 end)
 
