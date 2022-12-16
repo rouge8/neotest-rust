@@ -2,7 +2,7 @@
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.3.0
+    rev: v4.4.0
     hooks:
       # Filesystem
       - id: check-case-conflict
@@ -18,7 +18,7 @@ repos:
       - id: check-json
       - id: check-toml
   - repo: https://github.com/JohnnyMorganz/StyLua
-    rev: v0.15.2
+    rev: v0.15.3
     hooks:
       - id: stylua
   - repo: local
