@@ -481,7 +481,7 @@ describe("build_spec", function()
     it("parses results with a single test suite in it", function()
         local adapter = require("neotest-rust")({})
         local path = vim.loop.cwd() .. "/tests/data/single_test_suite.xml"
-        local spec = {context = {junit_path = path}}
+        local spec = { context = { junit_path = path } }
 
         local results = adapter.results(spec, nil, nil)
 
@@ -502,7 +502,7 @@ describe("build_spec", function()
     it("parses results with a multiple test suites in it", function()
         local adapter = require("neotest-rust")({})
         local path = vim.loop.cwd() .. "/tests/data/multiple_test_suites.xml"
-        local spec = {context = {junit_path = path}}
+        local spec = { context = { junit_path = path } }
 
         local results = adapter.results(spec, nil, nil)
         print(vim.inspect(results))
