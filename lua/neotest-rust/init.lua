@@ -183,8 +183,7 @@ function adapter.build_spec(args)
 
     -- Debug
     if args.strategy == "dap" then
-        return
-dap.resolve_strategy(position, cwd, context)
+        return dap.resolve_strategy(position, cwd, context)
     end
 
     -- Run
