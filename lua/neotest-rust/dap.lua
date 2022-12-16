@@ -1,12 +1,11 @@
 local M = {}
 
 -- Debugging from cargo is not possible
--- Get the name of the binary containing the test in target/debug/ 
+-- Get the name of the binary containing the test in target/debug/
 local function get_test_binary(integration_test)
-
-    local test_directory = 'src'
+    local test_directory = "src"
     if integration_test then
-        test_directory = 'tests'
+        test_directory = "tests"
     end
 
     local cmd = "cargo test --no-run --message-format=JSON"
@@ -17,12 +16,9 @@ local function get_test_binary(integration_test)
 
     local line = handle:read("l")
     while line do
-
-        if string.find(line, filter) and
-            not string.find(line, '"executable":null')
-        then
+        if string.find(line, filter) and not string.find(line, '"executable":null') then
             local i, j = string.find(line, '"executable":".+",')
-            local executable = string.sub(line, i+14, j-2)
+            local executable = string.sub(line, i + 14, j - 2)
 
             if handle then
                 handle:close()
@@ -42,7 +38,6 @@ end
 
 -- Modify the build spec to use the test binary
 M.resolve_strategy = function(position, cwd, context)
-
     local test_filter
 
     for s in string.gmatch(position.id, "([^::]+)") do
@@ -73,8 +68,7 @@ M.resolve_strategy = function(position, cwd, context)
 end
 
 M.file_exists = function(file)
-
-    local f = io.open(file, 'r')
+    local f = io.open(file, "r")
 
     if f ~= nil then
         io.close(f)
@@ -85,7 +79,6 @@ M.file_exists = function(file)
 end
 
 local function get_results_file(junit_path)
-
     local match_str = "(.-)[^\\/]-%.?(%d+)%.?[^\\/]*$"
     local tmp_dir, idx = string.match(junit_path, match_str)
 
@@ -96,11 +89,10 @@ end
 
 -- Translate plain test output to a neotest results object
 M.translate_results = function(junit_path)
-
     local result_map = {
         ok = "passed",
         FAILED = "failed",
-        ignored ="skipped",
+        ignored = "skipped",
     }
 
     local results = {}
@@ -110,13 +102,10 @@ M.translate_results = function(junit_path)
     local line = handle:read("l")
 
     while line do
-
-        if string.find(line, '^test result:') then
+        if string.find(line, "^test result:") then
             --
-        elseif string.find(line, '^test .+ %.%.%. %w+') then
-
-            local test_name, cargo_result =
-                string.match(line, '^test (.+) %.%.%. (%w+)')
+        elseif string.find(line, "^test .+ %.%.%. %w+") then
+            local test_name, cargo_result = string.match(line, "^test (.+) %.%.%. (%w+)")
 
             results[test_name] = { status = assert(result_map[cargo_result]) }
         end
