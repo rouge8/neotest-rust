@@ -176,12 +176,12 @@ function adapter.build_spec(args)
 
     local cwd = adapter.root(position.path)
 
-	local context = {
-		junit_path = junit_path,
-		file = position.path,
-		test_filter = test_filter,
-		integration_test = integration_test,
-	}
+    local context = {
+        junit_path = junit_path,
+        file = position.path,
+        test_filter = test_filter,
+        integration_test = integration_test,
+    }
 
     -- Debug
     if args.strategy == "dap" then
@@ -205,7 +205,7 @@ function adapter.results(spec, result, tree)
     local data
 
     local junit_path = spec.context.junit_path
-    if dap.test_file(junit_path) then
+    if dap.file_exists(junit_path) then
         with(open(junit_path, "r"), function(reader)
             data = reader:read("*a")
         end)

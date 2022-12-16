@@ -43,7 +43,7 @@ end
 -- Modify the build spec to use the test binary
 M.resolve_strategy = function(position, cwd, context)
 
-   	local test_filter
+       local test_filter
 
     for s in string.gmatch(position.id, "([^::]+)") do
         test_filter = s
@@ -69,10 +69,10 @@ M.resolve_strategy = function(position, cwd, context)
         cwd = cwd,
         context = context,
         strategy = strategy,
-	}
+    }
 end
 
-M.test_file = function(file)
+M.file_exists = function(file)
 
     local f = io.open(file, 'r')
 
@@ -118,7 +118,6 @@ M.translate_results = function(junit_path)
             local test_name, cargo_result =
                 string.match(line, '^test (.+) %.%.%. (%w+)')
 
-            -- TODO: Short for failures
             results[test_name] = { status = assert(result_map[cargo_result]) }
         end
 
