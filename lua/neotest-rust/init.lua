@@ -86,8 +86,11 @@ function adapter.discover_positions(path)
       (attribute
         (identifier) @macro_name
       )
-      (scoped_identifier
-        name: (identifier) @macro_name
+      (attribute
+        [
+	  (identifier) @macro_name
+	  (scoped_identifier
+	    name: (identifier) @macro_name
           )
         ]
       )
@@ -98,7 +101,6 @@ function adapter.discover_positions(path)
     name: (identifier) @test.name
   ) @test.definition
   (#contains? @macro_name "test" "rstest" "case")
-
 )
 (mod_item name: (identifier) @namespace.name)? @namespace.definition
     ]]
