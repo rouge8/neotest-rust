@@ -79,7 +79,6 @@ local function integration_test_name(path)
 end
 
 function adapter.discover_positions(path)
-
     local query = [[
 (
   (attribute_item
@@ -87,9 +86,6 @@ function adapter.discover_positions(path)
       (attribute
         (identifier) @macro_name
       )
-      (attribute
-        [
-      (identifier) @macro_name
       (scoped_identifier
         name: (identifier) @macro_name
           )

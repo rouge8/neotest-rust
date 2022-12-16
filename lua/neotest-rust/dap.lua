@@ -43,7 +43,7 @@ end
 -- Modify the build spec to use the test binary
 M.resolve_strategy = function(position, cwd, context)
 
-       local test_filter
+    local test_filter
 
     for s in string.gmatch(position.id, "([^::]+)") do
         test_filter = s
