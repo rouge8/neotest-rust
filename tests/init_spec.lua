@@ -494,7 +494,6 @@ describe("build_spec", function()
                 status = "passed",
             },
         }
-        print(vim.inspect(results))
 
         assert.are.same(expected, results)
     end)
@@ -523,7 +522,6 @@ describe("build_spec", function()
                 status = "passed",
             },
         }
-        print(vim.inspect(expected))
 
         assert.are.same(expected, results)
     end)
