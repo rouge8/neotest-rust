@@ -5,7 +5,6 @@ local open = context_manager.open
 local Path = require("plenary.path")
 local with = context_manager.with
 local xml = require("neotest.lib.xml")
-local xml_tree = require("neotest.lib.xml.tree")
 
 local adapter = { name = "neotest-rust" }
 
@@ -20,7 +19,7 @@ local is_callable = function(obj)
 end
 
 function adapter.is_test_file(file_path)
-    return vim.endswith(file_path, ".rs")
+    return vim.endswith(file_path, ".rs") and #adapter.discover_positions(file_path):to_list() ~= 1
 end
 
 local function is_unit_test(path)
@@ -188,29 +187,34 @@ function adapter.results(spec, result, tree)
         data = reader:read("*a")
     end)
 
-    local handler = xml_tree()
-    local parser = xml.parser(handler)
-    parser:parse(data)
-
-    local testcases
-    if #handler.root.testsuites.testsuite.testcase == 0 then
-        testcases = { handler.root.testsuites.testsuite.testcase }
-    else
-        testcases = handler.root.testsuites.testsuite.testcase
-    end
+    local root = xml.parse(data)
 
     local results = {}
 
-    for _, testcase in pairs(testcases) do
-        if testcase.failure then
-            results[testcase._attr.name] = {
-                status = "failed",
-                short = testcase.failure[1],
-            }
+    local testsuites
+    if #root.testsuites.testsuite == 0 then
+        testsuites = { root.testsuites.testsuite }
+    else
+        testsuites = root.testsuites.testsuite
+    end
+    for _, testsuite in pairs(testsuites) do
+        local testcases
+        if #testsuite.testcase == 0 then
+            testcases = { testsuite.testcase }
         else
-            results[testcase._attr.name] = {
-                status = "passed",
-            }
+            testcases = testsuite.testcase
+        end
+        for _, testcase in pairs(testcases) do
+            if testcase.failure then
+                results[testcase._attr.name] = {
+                    status = "failed",
+                    short = testcase.failure[1],
+                }
+            else
+                results[testcase._attr.name] = {
+                    status = "passed",
+                }
+            end
         end
     end
 
