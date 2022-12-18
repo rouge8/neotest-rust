@@ -16,7 +16,11 @@ local function get_test_binary(integration_test)
 
     local line = handle:read("l")
     while line do
-        if string.find(line, filter) and not string.find(line, '"executable":null') then
+        if
+            string.find(line, filter)
+            and string.find(line, '"executable":')
+            and not string.find(line, '"executable":null')
+        then
             local i, j = string.find(line, '"executable":".+",')
             local executable = string.sub(line, i + 14, j - 2)
 
