@@ -1,5 +1,6 @@
 local async = require("neotest.async")
 local context_manager = require("plenary.context_manager")
+local dap = require("neotest-rust.dap")
 local lib = require("neotest.lib")
 local open = context_manager.open
 local Path = require("plenary.path")
@@ -99,7 +100,6 @@ function adapter.discover_positions(path)
     name: (identifier) @test.name
   ) @test.definition
   (#contains? @macro_name "test" "rstest" "case")
-
 )
 (mod_item name: (identifier) @namespace.name)? @namespace.definition
     ]]
@@ -147,7 +147,8 @@ function adapter.build_spec(args)
         vim.list_extend(get_args(), args.extra_args or {}),
     })
 
-    if is_integration_test(position.path) then
+    local integration_test = is_integration_test(position.path)
+    if integration_test then
         vim.list_extend(command, { "--test", integration_test_name(position.path) })
     end
 
@@ -170,22 +171,39 @@ function adapter.build_spec(args)
     end
     table.insert(command, test_filter)
 
+    local cwd = adapter.root(position.path)
+
+    local context = {
+        junit_path = junit_path,
+        file = position.path,
+        test_filter = test_filter,
+        integration_test = integration_test,
+    }
+
+    -- Debug
+    if args.strategy == "dap" then
+        return dap.resolve_strategy(position, cwd, context)
+    end
+
+    -- Run
     return {
         command = table.concat(command, " "),
-        cwd = adapter.root(position.path),
-        context = {
-            junit_path = junit_path,
-            file = position.path,
-            test_filter = test_filter,
-        },
+        cwd = cwd,
+        context = context,
     }
 end
 
 function adapter.results(spec, result, tree)
     local data
-    with(open(spec.context.junit_path, "r"), function(reader)
-        data = reader:read("*a")
-    end)
+
+    local junit_path = spec.context.junit_path
+    if dap.file_exists(junit_path) then
+        with(open(junit_path, "r"), function(reader)
+            data = reader:read("*a")
+        end)
+    else
+        return dap.translate_results(junit_path)
+    end
 
     local root = xml.parse(data)
 
