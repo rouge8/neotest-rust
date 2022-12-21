@@ -3,8 +3,16 @@ local plugin = require("neotest-rust")
 local Tree = require("neotest.types").Tree
 
 describe("is_test_file", function()
-    it("matches Rust files", function()
-        assert.equals(true, plugin.is_test_file("foo.rs"))
+    async.it("matches Rust files with tests in them", function()
+        assert.equals(true, plugin.is_test_file(vim.loop.cwd() .. "/tests/data/src/mymod/foo.rs"))
+    end)
+
+    async.it("doesn't discover non-Rust files", function()
+        assert.equals(false, plugin.is_test_file(vim.loop.cwd() .. "/tests/data/Cargo.toml"))
+    end)
+
+    async.it("doesn't discover Rust file without tests in it", function()
+        assert.equals(false, plugin.is_test_file(vim.loop.cwd() .. "/tests/data/src/mymod/notests.rs"))
     end)
 end)
 
@@ -466,5 +474,55 @@ describe("build_spec", function()
             "cargo nextest run %-%-no%-fail%-fast %-%-config%-file %g+ %-%-profile neotest %-%-no%-capture %-%-test%-threads 3 %-%-test test_it ",
             spec.command
         )
+    end)
+end)
+
+describe("build_spec", function()
+    it("parses results with a single test suite in it", function()
+        local adapter = require("neotest-rust")({})
+        local path = vim.loop.cwd() .. "/tests/data/single_test_suite.xml"
+        local spec = { context = { junit_path = path } }
+
+        local results = adapter.results(spec, nil, nil)
+
+        local expected = {
+            ["foo::tests::should_fail"] = {
+                short = "thread 'foo::tests::should_fail' panicked at 'assertion failed: false', src/foo.rs:10:9\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
+                status = "failed",
+            },
+            ["foo::tests::should_pass"] = {
+                status = "passed",
+            },
+        }
+
+        assert.are.same(expected, results)
+    end)
+
+    it("parses results with a multiple test suites in it", function()
+        local adapter = require("neotest-rust")({})
+        local path = vim.loop.cwd() .. "/tests/data/multiple_test_suites.xml"
+        local spec = { context = { junit_path = path } }
+
+        local results = adapter.results(spec, nil, nil)
+        print(vim.inspect(results))
+
+        local expected = {
+            ["foo::tests::should_fail"] = {
+                short = "thread 'foo::tests::should_fail' panicked at 'assertion failed: false', src/foo.rs:10:9\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
+                status = "failed",
+            },
+            ["foo::tests::should_pass"] = {
+                status = "passed",
+            },
+            should_fail = {
+                short = "thread 'should_fail' panicked at 'assertion failed: false', tests/tests.rs:8:5\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
+                status = "failed",
+            },
+            should_pass = {
+                status = "passed",
+            },
+        }
+
+        assert.are.same(expected, results)
     end)
 end)
