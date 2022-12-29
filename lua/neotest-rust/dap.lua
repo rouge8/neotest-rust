@@ -42,26 +42,29 @@ end
 
 -- Modify the build spec to use the test binary
 M.resolve_strategy = function(position, cwd, context)
-    local test_filter
 
-    for s in string.gmatch(position.id, "([^::]+)") do
-        test_filter = s
-    end
+	if position.type == 'test' then
+		for s in string.gmatch(position.id, "([^::]+)") do
+			context.test_filter = s
+		end
+	else
+		context.test_filter = context.test_path
+	end
 
     local args = {
         "--nocapture",
         "--test",
-        test_filter,
+        context.test_filter,
     }
 
     local strategy = {
         name = "Debug Rust Tests",
         type = "lldb",
         request = "launch",
-        program = get_test_binary(context.integration_test),
         cwd = cwd or "${workspaceFolder}",
         stopOnEntry = false,
         args = args,
+        program = get_test_binary(context.integration_test),
     }
 
     return {

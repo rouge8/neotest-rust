@@ -477,7 +477,7 @@ describe("build_spec", function()
     end)
 end)
 
-describe("build_spec", function()
+describe("results", function()
     it("parses results with a single test suite in it", function()
         local adapter = require("neotest-rust")({})
         local path = vim.loop.cwd() .. "/tests/data/single_test_suite.xml"

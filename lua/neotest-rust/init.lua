@@ -178,6 +178,7 @@ function adapter.build_spec(args)
         file = position.path,
         test_filter = test_filter,
         integration_test = integration_test,
+		test_path = path_to_test_path(position.path),
     }
 
     -- Debug
