@@ -6,10 +6,10 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
 
 running 5 tests
-test mymod::tests::math ... ok
+test tests::basic_math ... ignored
 test mymod::foo::tests::math ... ok
+test mymod::tests::math ... ok
 test tests::nested::nested_math ... ok
-test tests::basic_math ... ok
 test tests::failed_math ... FAILED
 
 failures:
@@ -24,5 +24,5 @@ note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 failures:
     tests::failed_math
 
-test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: FAILED. 3 passed; 1 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
 

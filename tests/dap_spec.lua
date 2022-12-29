@@ -5,8 +5,6 @@ local Tree = require("neotest.types").Tree
 local it = async.it
 local describe = async.describe
 
--- TODO: M.resolve_strategy = function(position, cwd, context)
---	return { cwd = cwd, context = context, strategy = strategy }
 describe("resolve_strategy", function()
 
 	---- Does not support running the whole test suite
@@ -133,28 +131,18 @@ describe("file_exists", function()
 	end)
 end)
 
--- TODO:
 describe("translate_results", function()
 
-	-- TODO:
     it("parses results with a single test suite in it", function()
-        --local adapter = require("neotest-rust")({})
-        --local path = vim.loop.cwd() .. "/tests/data/single_test_suite.xml"
-        --local spec = { context = { junit_path = path } }
+        local path = vim.loop.cwd() .. "/tests/data/0"
 
-        --local results = adapter.results(spec, nil, nil)
+        local results = dap.translate_results(path)
 
-        --local expected = {
-        --    ["foo::tests::should_fail"] = {
-        --        short = "thread 'foo::tests::should_fail' panicked at 'assertion failed: false', src/foo.rs:10:9\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
-        --        status = "failed",
-        --    },
-        --    ["foo::tests::should_pass"] = {
-        --        status = "passed",
-        --    },
-        --}
+        local expected = {
+            ["tests::math"] = { status = "passed" },
+        }
 
-        --assert.are.same(expected, results)
+        assert.are.same(expected, results)
     end)
 
     it("translates raw results with multiple test suites in it", function()
@@ -164,15 +152,13 @@ describe("translate_results", function()
 
         local expected = {
 
-            ["tests::math"] = { status = "passed",},
+            ["tests::math"] = { status = "passed" },
 
-            ["mymod::tests::math"] = { status = "passed",},
-            ["mymod::foo::tests::math"] = { status = "passed",},
-            ["tests::nested::nested_math"] = { status = "passed",},
-            ["tests::basic_math"] = { status = "passed",},
-            ["tests::failed_math"] = {
-				status = "failed",
-			},
+            ["mymod::tests::math"] = { status = "passed" },
+            ["mymod::foo::tests::math"] = { status = "passed" },
+            ["tests::nested::nested_math"] = { status = "passed" },
+            ["tests::basic_math"] = { status = "skipped" },
+            ["tests::failed_math"] = { status = "failed" },
         }
 
         assert.are.same(expected, results)
