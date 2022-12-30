@@ -125,8 +125,9 @@ function adapter.build_spec(args)
     local tmp_nextest_config = async.fn.tempname() .. ".nextest.toml"
     local junit_path = async.fn.tempname() .. ".junit.xml"
     local position = args.tree:data()
+	local cwd = adapter.root(position.path)
 
-    local nextest_config = Path:new(adapter.root(position.path) .. ".config/nextest.toml")
+    local nextest_config = Path:new(cwd .. ".config/nextest.toml")
     if nextest_config:exists() then
         nextest_config:copy({ destination = tmp_nextest_config })
     end
@@ -171,19 +172,42 @@ function adapter.build_spec(args)
     end
     table.insert(command, test_filter)
 
-    local cwd = adapter.root(position.path)
-
     local context = {
         junit_path = junit_path,
         file = position.path,
         test_filter = test_filter,
-        integration_test = integration_test,
-		test_path = path_to_test_path(position.path),
     }
 
     -- Debug
     if args.strategy == "dap" then
-        return dap.resolve_strategy(position, cwd, context)
+
+		if position.type == 'test' then
+			for s in string.gmatch(position.id, "([^::]+)") do
+				context.test_filter = s
+			end
+		else
+			context.test_filter = path_to_test_path(position.path)
+		end
+
+		local strategy = {
+			name = "Debug Rust Tests",
+			type = "lldb",
+			request = "launch",
+			cwd = cwd or "${workspaceFolder}",
+			stopOnEntry = false,
+			args = {
+				"--nocapture",
+				"--test",
+				context.test_filter,
+			},
+			program = dap.get_test_binary(cwd, position.path),
+		}
+
+		return {
+			cwd = cwd,
+			context = context,
+			strategy = strategy,
+		}
     end
 
     -- Run

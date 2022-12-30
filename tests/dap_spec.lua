@@ -5,106 +5,73 @@ local Tree = require("neotest.types").Tree
 local it = async.it
 local describe = async.describe
 
-describe("resolve_strategy", function()
+describe("get_test_binary", function()
 
-	---- Does not support running the whole test suite
-	---- only individual tests or files.
-	--it("can create a strategy for a directory of tests", function()end)
-	--it("can create a strategy for a namespace", function()end)
 	local cwd = vim.loop.cwd()
-	local path = cwd .. "/tests/data/src/mymod/foo.rs"
-	local junit_path = "/nvim/mock/1.junit.xml"
+	local root = cwd .. "/tests/data"
 
-	-- TODO: Integration test debugging
+	it("returns the test binary for src/lib.rs", function()
 
-	it("can create a strategy for a single test", function()
+		local expected = root .. "/target/debug/deps/data-071ea79d6338284b"
+		local actual = dap.get_test_binary(root, root .. "/src/lib.rs")
 
-		local tree = Tree:new({
-			type = "test",
-			path = path,
-			id = "mymod::foo::tests::math",
-		}, {}, function(data)
-			return data
-		end, {})
-
-		local context = {
-			junit_path = junit_path,
-			file = path,
-			test_filter = "",
-			integration_test = false,
-			test_path = nil
-		}
-
-		local spec = dap.resolve_strategy(tree:data(), cwd, context)
-
-		assert.equal(spec.cwd, cwd)
-
-		assert.are.same(spec.context, {
-			junit_path = junit_path,
-			file = path,
-			test_filter = "math",
-			integration_test = false,
-			test_path = nil,
-		})
-
-		assert.are.same(spec.strategy, {
-			name = "Debug Rust Tests",
-			type = "lldb",
-			request = "launch",
-			cwd = cwd,
-			stopOnEntry = false,
-			args = {
-				"--nocapture",
-				"--test",
-				"math",
-			},
-			program = nil,
-		})
+		assert.equal(expected, actual)
 	end)
 
-	it("can create a strategy for a file of tests", function()
+	it("returns the test binary for src/main.rs", function()
 
-        local tree = Tree:new({
-            type = "file",
-            path = path,
-            id = path,
-        }, {}, function(data)
-            return data
-        end, {})
+		local expected = root .. "/target/debug/deps/data-7dd6d45fc077308b"
+		local actual = dap.get_test_binary(root, root .. "/src/main.rs")
 
-		local context = {
-			junit_path = junit_path,
-			file = path,
-			test_filter = "",
-			integration_test = false,
-			test_path = "mymod::foo"
-		}
+		assert.equal(expected, actual)
+	end)
 
-		local spec = dap.resolve_strategy(tree:data(), cwd, context)
+	it("returns the test binary for src/mymod/foo.rs", function()
 
-		assert.equal(spec.cwd, cwd)
+		local expected = root .. "/target/debug/deps/data-7dd6d45fc077308b"
+		local actual = dap.get_test_binary(root, root .. "/src/mymod/foo.rs")
 
-		assert.are.same(spec.context, {
-			junit_path = junit_path,
-			file = path,
-			test_filter = "mymod::foo",
-			integration_test = false,
-			test_path = "mymod::foo"
-		})
+		assert.equal(expected, actual)
+	end)
 
-		assert.are.same(spec.strategy, {
-			name = "Debug Rust Tests",
-			type = "lldb",
-			request = "launch",
-			cwd = cwd,
-			stopOnEntry = false,
-			args = {
-				"--nocapture",
-				"--test",
-				context.test_path,
-			},
-			program = nil,
-		})
+	it("returns the test binary for src/mymod/mod.rs", function()
+
+		local expected = root .. "/target/debug/deps/data-7dd6d45fc077308b"
+		local actual = dap.get_test_binary(root, root .. "/src/mymod/mod.rs")
+
+		assert.equal(expected, actual)
+	end)
+
+	it("returns the test binary for src/mymod/notests.rs", function()
+
+		local expected = nil
+		local actual = dap.get_test_binary(root, root .. "/src/mymod/notests.rs")
+
+		assert.equal(expected, actual)
+	end)
+
+	it("returns the test binary for tests/test_it.rs", function()
+
+		local expected = root .. "/target/debug/deps/test_it-6a27e87431b46ac9"
+		local actual = dap.get_test_binary(root, root .. "/tests/test_it.rs")
+
+		assert.equal(expected, actual)
+	end)
+
+	it("returns the test binary for tests/testsuite/it.rs", function()
+
+		local expected = root .. "/target/debug/deps/testsuite-37806187190b2d0b"
+		local actual = dap.get_test_binary(root, root .. "/tests/testsuite/it.rs")
+
+		assert.equal(expected, actual)
+	end)
+
+	it("returns the test binary for tests/testsuite/main.rs", function()
+
+		local expected = root .. "/target/debug/deps/testsuite-37806187190b2d0b"
+		local actual = dap.get_test_binary(root, root .. "/tests/testsuite/main.rs")
+
+		assert.equal(expected, actual)
 	end)
 end)
 

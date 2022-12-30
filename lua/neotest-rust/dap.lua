@@ -1,34 +1,24 @@
 local M = {}
 
--- Debugging from cargo is not possible
--- Get the name of the binary containing the test in target/debug/
-local function get_test_binary(integration_test)
-    local test_directory = "src"
-    if integration_test then
-        test_directory = "tests"
-    end
-
-    local cmd = "cargo test --no-run --message-format=JSON"
-    local handle = assert(io.popen(cmd))
+local function get_src_paths(root)
 
     local sep = require("plenary.path").path.sep
-    local filter = '"src_path":".+' .. sep .. test_directory .. sep .. '.+.rs",'
+	local cmd = "cargo test --no-run --message-format=JSON --manifest-path=" .. root .. sep .. "Cargo.toml"
+    local handle = assert(io.popen(cmd))
+
+	local src_paths = {}
+    local src_filter = '"src_path":"(.+' .. sep  .. '.+.rs)",'
+    local exe_filter = '"executable":"(.+' .. sep  .. 'deps' .. sep .. '.+)",'
 
     local line = handle:read("l")
     while line do
         if
-            string.find(line, filter)
-            and string.find(line, '"executable":')
-            and not string.find(line, '"executable":null')
+            string.find(line, src_filter)
+            and string.find(line, exe_filter)
         then
-            local i, j = string.find(line, '"executable":".+",')
-            local executable = string.sub(line, i + 14, j - 2)
-
-            if handle then
-                handle:close()
-            end
-
-            return executable
+            local src_path = string.match(line, src_filter)
+			local executable = string.match(line, exe_filter)
+			src_paths[src_path] = executable
         end
         line = handle:read("l")
     end
@@ -37,41 +27,40 @@ local function get_test_binary(integration_test)
         handle:close()
     end
 
-    return nil
+    return src_paths
 end
 
--- Modify the build spec to use the test binary
-M.resolve_strategy = function(position, cwd, context)
+---- TODO: :help vim.treesitter
+--local function check_mods(path)
+--    local query = [[
+--    ]]
+--
+--    --local tree = lib.treesitter.parse_positions(path, query, {
+--    --    require_namespaces = false,
+--    --    position_id = function(position, namespaces)
+--    --        return table.concat(
+--    --            vim.tbl_flatten({
+--    --                path_to_test_path(path),
+--    --                vim.tbl_map(function(pos)
+--    --                    return pos.name
+--    --                end, namespaces),
+--    --                position.name,
+--    --            }),
+--    --            "::"
+--    --        )
+--    --    end,
+--    --})
+--end
 
-	if position.type == 'test' then
-		for s in string.gmatch(position.id, "([^::]+)") do
-			context.test_filter = s
+M.get_test_binary = function(root, path)
+
+	for src_path, executable in pairs(get_src_paths(root)) do
+		if path == src_path then
+			return executable
 		end
-	else
-		context.test_filter = context.test_path
 	end
 
-    local args = {
-        "--nocapture",
-        "--test",
-        context.test_filter,
-    }
-
-    local strategy = {
-        name = "Debug Rust Tests",
-        type = "lldb",
-        request = "launch",
-        cwd = cwd or "${workspaceFolder}",
-        stopOnEntry = false,
-        args = args,
-        program = get_test_binary(context.integration_test),
-    }
-
-    return {
-        cwd = cwd,
-        context = context,
-        strategy = strategy,
-    }
+	return nil
 end
 
 M.file_exists = function(file)
