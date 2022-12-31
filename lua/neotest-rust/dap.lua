@@ -79,14 +79,6 @@ local function get_mods(path)
 	return collect(parsed_query, content, root)
 end
 
---Locals:
---   root = /home/mark/workspace/Lua/neotest-rust/tests/data
---   path = /home/mark/workspace/Lua/neotest-rust/tests/data/src/mymod/mod.rs
---   src_path = /home/mark/workspace/Lua/neotest-rust/tests/data/src/main.rs
---   executable = /home/mark/workspace/Lua/neotest-rust/tests/data/target/debug/deps/data-7dd6d45fc077308b
---   mod = mymod
---   get_src_paths = function: 0x7fd57f010250
---   get_mods = function: 0x7fd57f0102b0
 local function construct_mod_path(src_path, mod)
 
     local match_str = "(.-)[^\\/]-%.?(%w+)%.?[^\\/]*$"
@@ -102,23 +94,40 @@ local function construct_mod_path(src_path, mod)
 	end
 end
 
+local function search_modules(src_path, path)
+
+	local mods = get_mods(src_path)
+
+	if mods == {} then
+		return false
+	end
+
+	for _, mod in ipairs(mods) do
+		local mod_path = construct_mod_path(src_path, mod)
+		if path == mod_path then
+			return true
+		else
+			return search_modules(mod_path, path)
+		end
+	end
+end
+
 M.get_test_binary = function(root, path)
 
 	local src_paths = get_src_paths(root)
 
+	-- If 'path' is the source of the exe we are done
 	for src_path, executable in pairs(src_paths) do
 		if path == src_path then
 			return executable
 		end
 	end
 
-	-- TODO: Make recursive
+	-- Otherwise we need to figure out which 'src_path' it is loaded from
 	for src_path, executable in pairs(src_paths) do
-		local mods = get_mods(src_path)
-		for _, mod in ipairs(mods) do
-			if path == construct_mod_path(src_path, mod) then
-				return executable
-			end
+		local mod_match = search_modules(src_path, path)
+		if mod_match then
+			return executable
 		end
 	end
 
