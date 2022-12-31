@@ -1,8 +1,21 @@
+local lib = require("neotest.lib")
+local sep = require("plenary.path").path.sep
+
 local M = {}
+
+M.file_exists = function(file)
+    local f = io.open(file, "r")
+
+    if f ~= nil then
+        io.close(f)
+        return true
+    else
+        return false
+    end
+end
 
 local function get_src_paths(root)
 
-    local sep = require("plenary.path").path.sep
 	local cmd = "cargo test --no-run --message-format=JSON --manifest-path=" .. root .. sep .. "Cargo.toml"
     local handle = assert(io.popen(cmd))
 
@@ -30,48 +43,86 @@ local function get_src_paths(root)
     return src_paths
 end
 
----- TODO: :help vim.treesitter
---local function check_mods(path)
---    local query = [[
---    ]]
---
---    --local tree = lib.treesitter.parse_positions(path, query, {
---    --    require_namespaces = false,
---    --    position_id = function(position, namespaces)
---    --        return table.concat(
---    --            vim.tbl_flatten({
---    --                path_to_test_path(path),
---    --                vim.tbl_map(function(pos)
---    --                    return pos.name
---    --                end, namespaces),
---    --                position.name,
---    --            }),
---    --            "::"
---    --        )
---    --    end,
---    --})
---end
+local function collect(query, source, root)
+
+	local mods = {}
+
+	for _, match in query:iter_matches(root, source) do
+
+		local captured_nodes = {}
+		for i, capture in ipairs(query.captures) do
+			captured_nodes[capture] = match[i]
+		end
+
+		if captured_nodes["mod_name"] then
+			local mod_name = vim.treesitter.get_node_text(captured_nodes["mod_name"], source)
+			table.insert(mods, mod_name)
+		end
+	end
+
+	return mods
+end
+
+local function get_mods(path)
+
+	local content = lib.files.read(path)
+    local query = [[
+(mod_item
+	name: (identifier) @mod_name
+	.
+)
+    ]]
+
+	local root, lang = lib.treesitter.get_parse_root(path, content, {})
+	local parsed_query = lib.treesitter.normalise_query(lang, query)
+
+	return collect(parsed_query, content, root)
+end
+
+--Locals:
+--   root = /home/mark/workspace/Lua/neotest-rust/tests/data
+--   path = /home/mark/workspace/Lua/neotest-rust/tests/data/src/mymod/mod.rs
+--   src_path = /home/mark/workspace/Lua/neotest-rust/tests/data/src/main.rs
+--   executable = /home/mark/workspace/Lua/neotest-rust/tests/data/target/debug/deps/data-7dd6d45fc077308b
+--   mod = mymod
+--   get_src_paths = function: 0x7fd57f010250
+--   get_mods = function: 0x7fd57f0102b0
+local function construct_mod_path(src_path, mod)
+
+    local match_str = "(.-)[^\\/]-%.?(%w+)%.?[^\\/]*$"
+    local abs_path, _ = string.match(src_path, match_str)
+
+	local mod_file = abs_path .. mod .. ".rs"
+	local mod_dir = abs_path .. mod .. sep .. "mod.rs"
+
+	if M.file_exists(mod_file) then
+		return mod_file
+	elseif M.file_exists(mod_dir) then
+		return mod_dir
+	end
+end
 
 M.get_test_binary = function(root, path)
 
-	for src_path, executable in pairs(get_src_paths(root)) do
+	local src_paths = get_src_paths(root)
+
+	for src_path, executable in pairs(src_paths) do
 		if path == src_path then
 			return executable
 		end
 	end
 
+	-- TODO: Make recursive
+	for src_path, executable in pairs(src_paths) do
+		local mods = get_mods(src_path)
+		for _, mod in ipairs(mods) do
+			if path == construct_mod_path(src_path, mod) then
+				return executable
+			end
+		end
+	end
+
 	return nil
-end
-
-M.file_exists = function(file)
-    local f = io.open(file, "r")
-
-    if f ~= nil then
-        io.close(f)
-        return true
-    else
-        return false
-    end
 end
 
 local function get_results_file(junit_path)
