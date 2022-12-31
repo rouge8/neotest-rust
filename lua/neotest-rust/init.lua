@@ -182,9 +182,7 @@ function adapter.build_spec(args)
     if args.strategy == "dap" then
 
 		if position.type == 'test' then
-			for s in string.gmatch(position.id, "([^::]+)") do
-				context.test_filter = s
-			end
+			context.test_filter = position.id
 		else
 			context.test_filter = path_to_test_path(position.path)
 		end
@@ -197,7 +195,7 @@ function adapter.build_spec(args)
 			stopOnEntry = false,
 			args = {
 				"--nocapture",
-				"--test",
+				"--exact",
 				context.test_filter,
 			},
 			program = dap.get_test_binary(cwd, position.path),
