@@ -112,11 +112,14 @@ local function search_modules(src_path, path)
 	end
 end
 
+-- Debugging is only possible from the generated test binary
+-- See: https://github.com/rust-lang/cargo/issues/1924#issuecomment-289764090
+-- Identify the binary containing the tests defined in 'path'
 M.get_test_binary = function(root, path)
 
 	local src_paths = get_src_paths(root)
 
-	-- If 'path' is the source of the exe we are done
+	-- If 'path' is the source of the binary we are done
 	for src_path, executable in pairs(src_paths) do
 		if path == src_path then
 			return executable

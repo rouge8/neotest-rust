@@ -1,10 +1,35 @@
 local async = require("plenary.async.tests")
 local dap = require("neotest-rust.dap")
+local plugin = require("neotest-rust")
 local Tree = require("neotest.types").Tree
 
 local it = async.it
 local describe = async.describe
 
+describe("file_exists", function()
+
+	local cwd = vim.loop.cwd()
+
+	it("returns true when the file exists", function()
+
+		local path = cwd .. "/tests/data/src/mymod/foo.rs"
+
+		local exists = dap.file_exists(path)
+
+		assert.equal(exists, true)
+	end)
+
+	it("returns false when the file does not exist", function()
+
+		local path = cwd .. "/tests/data/src/mymod/bar.rs"
+
+		local exists = dap.file_exists(path)
+
+		assert.equal(exists, false)
+	end)
+end)
+
+-- TODO: These won't work in CI
 describe("get_test_binary", function()
 
 	local cwd = vim.loop.cwd()
@@ -16,6 +41,8 @@ describe("get_test_binary", function()
 		local actual = dap.get_test_binary(root, root .. "/src/lib.rs")
 
 		assert.equal(expected, actual)
+		--local unexpected = root .. "/target/debug/deps/data-.*"
+		--assert.matches(actual, unexpected)
 	end)
 
 	it("returns the test binary for src/main.rs", function()
@@ -75,29 +102,6 @@ describe("get_test_binary", function()
 	end)
 end)
 
-describe("file_exists", function()
-
-	local cwd = vim.loop.cwd()
-
-	it("returns true when the file exists", function()
-
-		local path = cwd .. "/tests/data/src/mymod/foo.rs"
-
-		local exists = dap.file_exists(path)
-
-		assert.equal(exists, true)
-	end)
-
-	it("returns false when the file does not exist", function()
-
-		local path = cwd .. "/tests/data/src/mymod/bar.rs"
-
-		local exists = dap.file_exists(path)
-
-		assert.equal(exists, false)
-	end)
-end)
-
 describe("translate_results", function()
 
     it("parses results with a single test suite in it", function()
@@ -130,4 +134,198 @@ describe("translate_results", function()
 
         assert.are.same(expected, results)
 	end)
+end)
+
+describe("build_spec", function()
+    it("can debug a single test", function()
+        local tree = Tree:new({
+            type = "test",
+            path = vim.loop.cwd() .. "/tests/data/src/mymod/foo.rs",
+            id = "mymod::foo::tests::math",
+        }, {}, function(data)
+            return data
+        end, {})
+
+        local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+        assert.are.same(spec.strategy.args, {
+			"--nocapture",
+			"--exact",
+			"mymod::foo::tests::math",
+		})
+        assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
+    end)
+
+    it("can debug a test file", function()
+        local tree = Tree:new({
+            type = "file",
+            path = vim.loop.cwd() .. "/tests/data/src/mymod/foo.rs",
+            id = vim.loop.cwd() .. "/tests/data/src/mymod/foo.rs",
+        }, {}, function(data)
+            return data
+        end, {})
+
+        local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+        assert.are.same(spec.strategy.args, {
+			"--nocapture",
+			"mymod::foo",
+		})
+        assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
+    end)
+
+    it("can debug tests in main.rs", function()
+        local tree = Tree:new({
+            type = "file",
+            path = vim.loop.cwd() .. "/tests/data/src/main.rs",
+            id = vim.loop.cwd() .. "/tests/data/src/main.rs",
+        }, {}, function(data)
+            return data
+        end, {})
+
+        local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+        assert.are.same(spec.strategy.args, {
+			"--nocapture",
+			"tests",
+		})
+        assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
+    end)
+
+    it("can debug tests in lib.rs", function()
+        local tree = Tree:new({
+            type = "file",
+            path = vim.loop.cwd() .. "/tests/data/src/lib.rs",
+            id = vim.loop.cwd() .. "/tests/data/src/lib.rs",
+        }, {}, function(data)
+            return data
+        end, {})
+
+        local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+        assert.are.same(spec.strategy.args, {
+			"--nocapture",
+			"tests",
+		})
+        assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
+    end)
+
+	-- TODO: Fix
+    it("can debug tests in mod.rs", function()
+        local tree = Tree:new({
+            type = "file",
+            path = vim.loop.cwd() .. "/tests/data/src/mymod/mod.rs",
+            id = vim.loop.cwd() .. "/tests/data/src/mymod/mod.rs",
+        }, {}, function(data)
+            return data
+        end, {})
+
+        local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+        assert.are.same(spec.strategy.args, {
+			"--nocapture",
+			"mymod",
+		})
+        assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
+    end)
+
+    it("can debug a single integration test", function()
+        local tree = Tree:new({
+            type = "test",
+            path = vim.loop.cwd() .. "/tests/data/tests/test_it.rs",
+            id = "top_level_math",
+        }, {}, function(data)
+            return data
+        end, {})
+
+        local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+        assert.are.same(spec.strategy.args, {
+			"--nocapture",
+			"--exact",
+			"top_level_math",
+		})
+        assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
+    end)
+
+    it("can debug a file of integration tests", function()
+        local tree = Tree:new({
+            type = "file",
+            path = vim.loop.cwd() .. "/tests/data/tests/test_it.rs",
+            id = vim.loop.cwd() .. "/tests/data/src/tests/test_it.rs",
+        }, {}, function(data)
+            return data
+        end, {})
+
+        local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+        assert.are.same(spec.strategy.args, {
+			"--nocapture",
+			"tests",
+		})
+        assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
+    end)
+
+    it("can debug an integration test in main.rs in a subdirectory", function()
+        local tree = Tree:new({
+            type = "test",
+            path = vim.loop.cwd() .. "/tests/data/tests/testsuite/main.rs",
+            id = "testsuite_top_level_math",
+        }, {}, function(data)
+            return data
+        end, {})
+
+        local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+        assert.are.same(spec.strategy.args, {
+			"--nocapture",
+			"--exact",
+			"testsuite_top_level_math",
+		})
+        assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
+    end)
+
+    it("can debug all integration tests in main.rs in a subdirectory", function()
+        local tree = Tree:new({
+            type = "file",
+            path = vim.loop.cwd() .. "/tests/data/tests/testsuite/main.rs",
+            id = vim.loop.cwd() .. "/tests/data/src/tests/testsuite/main.rs",
+        }, {}, function(data)
+            return data
+        end, {})
+
+        local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+        assert.are.same(spec.strategy.args, {
+			"--nocapture",
+			"tests",
+		})
+        assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
+    end)
+
+    it("can debug an integration test in another test file in a subdirectory", function()
+        local tree = Tree:new({
+            type = "test",
+            path = vim.loop.cwd() .. "/tests/data/tests/testsuite/it.rs",
+            id = "it::testsuite_it_math",
+        }, {}, function(data)
+            return data
+        end, {})
+
+        local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+        assert.are.same(spec.strategy.args, {
+			"--nocapture",
+			"--exact",
+			"it::testsuite_it_math",
+		})
+        assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
+    end)
+
+    it("can debug all integration tests in another test file in a subdirectory", function()
+        local tree = Tree:new({
+            type = "file",
+            path = vim.loop.cwd() .. "/tests/data/tests/testsuite/it.rs",
+            id = "it::",
+        }, {}, function(data)
+            return data
+        end, {})
+
+        local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+        assert.are.same(spec.strategy.args, {
+			"--nocapture",
+			"it",
+		})
+        assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
+    end)
 end)
