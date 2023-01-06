@@ -15,7 +15,7 @@ M.file_exists = function(file)
 end
 
 local function get_src_paths(root)
-    local cmd = "cargo test --no-run --message-format=JSON --manifest-path=" .. root .. sep .. "Cargo.toml"
+    local cmd = "cargo test --no-run --message-format=JSON --manifest-path=" .. root .. sep .. "Cargo.toml --quiet"
     local handle = assert(io.popen(cmd))
 
     local src_paths = {}
