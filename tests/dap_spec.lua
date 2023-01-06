@@ -1,4 +1,5 @@
 local async = require("plenary.async.tests")
+local strings = require("plenary.strings")
 local dap = require("neotest-rust.dap")
 local plugin = require("neotest-rust")
 local Tree = require("neotest.types").Tree
@@ -7,103 +8,99 @@ local it = async.it
 local describe = async.describe
 
 describe("file_exists", function()
+    local cwd = vim.loop.cwd()
 
-	local cwd = vim.loop.cwd()
+    it("returns true when the file exists", function()
+        local path = cwd .. "/tests/data/src/mymod/foo.rs"
 
-	it("returns true when the file exists", function()
+        local exists = dap.file_exists(path)
 
-		local path = cwd .. "/tests/data/src/mymod/foo.rs"
+        assert.equal(exists, true)
+    end)
 
-		local exists = dap.file_exists(path)
+    it("returns false when the file does not exist", function()
+        local path = cwd .. "/tests/data/src/mymod/bar.rs"
 
-		assert.equal(exists, true)
-	end)
+        local exists = dap.file_exists(path)
 
-	it("returns false when the file does not exist", function()
-
-		local path = cwd .. "/tests/data/src/mymod/bar.rs"
-
-		local exists = dap.file_exists(path)
-
-		assert.equal(exists, false)
-	end)
+        assert.equal(exists, false)
+    end)
 end)
 
--- TODO: These won't work in CI
+-- Binaries are created for src/lib.rs, src/main.rs, tests/test_it.rs, and
+-- tests/testsuite/main.rs. We can only test that they match expected substrings
+-- and that the other modules resolve to their source binaries
 describe("get_test_binary", function()
+    local cwd = vim.loop.cwd()
+    local root = cwd .. "/tests/data"
 
-	local cwd = vim.loop.cwd()
-	local root = cwd .. "/tests/data"
+    local lib_actual = dap.get_test_binary(root, root .. "/src/lib.rs")
+    local main_actual = dap.get_test_binary(root, root .. "/src/main.rs")
+    local test_it_actual = dap.get_test_binary(root, root .. "/tests/test_it.rs")
+    local testsuite_actual = dap.get_test_binary(root, root .. "/tests/testsuite/main.rs")
 
-	it("returns the test binary for src/lib.rs", function()
+    it("returns the test binary for src/lib.rs", function()
+        assert(lib_actual)
+        local expected = root .. "/target/debug/deps/data-"
+        local actual = strings.truncate(lib_actual, lib_actual:len() - 16, "-")
 
-		local expected = root .. "/target/debug/deps/data-071ea79d6338284b"
-		local actual = dap.get_test_binary(root, root .. "/src/lib.rs")
+        assert.equal(expected, actual)
+    end)
 
-		assert.equal(expected, actual)
-		--local unexpected = root .. "/target/debug/deps/data-.*"
-		--assert.matches(actual, unexpected)
-	end)
+    it("returns the test binary for src/main.rs", function()
+        assert(main_actual)
+        local expected = root .. "/target/debug/deps/data-"
+        local actual = strings.truncate(main_actual, main_actual:len() - 16, "-")
 
-	it("returns the test binary for src/main.rs", function()
+        assert.equal(expected, actual)
+    end)
 
-		local expected = root .. "/target/debug/deps/data-7dd6d45fc077308b"
-		local actual = dap.get_test_binary(root, root .. "/src/main.rs")
+    it("returns the test binary for src/mymod/foo.rs", function()
+        local expected = main_actual
+        local actual = dap.get_test_binary(root, root .. "/src/mymod/foo.rs")
 
-		assert.equal(expected, actual)
-	end)
+        assert.equal(expected, actual)
+    end)
 
-	it("returns the test binary for src/mymod/foo.rs", function()
+    it("returns the test binary for src/mymod/mod.rs", function()
+        local expected = main_actual
+        local actual = dap.get_test_binary(root, root .. "/src/mymod/mod.rs")
 
-		local expected = root .. "/target/debug/deps/data-7dd6d45fc077308b"
-		local actual = dap.get_test_binary(root, root .. "/src/mymod/foo.rs")
+        assert.equal(expected, actual)
+    end)
 
-		assert.equal(expected, actual)
-	end)
+    it("returns the test binary for src/mymod/notests.rs", function()
+        local expected = nil
+        local actual = dap.get_test_binary(root, root .. "/src/mymod/notests.rs")
 
-	it("returns the test binary for src/mymod/mod.rs", function()
+        assert.equal(expected, actual)
+    end)
 
-		local expected = root .. "/target/debug/deps/data-7dd6d45fc077308b"
-		local actual = dap.get_test_binary(root, root .. "/src/mymod/mod.rs")
+    it("returns the test binary for tests/test_it.rs", function()
+        assert(test_it_actual)
+        local expected = root .. "/target/debug/deps/test_it-"
+        local actual = strings.truncate(test_it_actual, test_it_actual:len() - 16, "-")
 
-		assert.equal(expected, actual)
-	end)
+        assert.equal(expected, actual)
+    end)
 
-	it("returns the test binary for src/mymod/notests.rs", function()
+    it("returns the test binary for tests/testsuite/it.rs", function()
+        local expected = testsuite_actual
+        local actual = dap.get_test_binary(root, root .. "/tests/testsuite/it.rs")
 
-		local expected = nil
-		local actual = dap.get_test_binary(root, root .. "/src/mymod/notests.rs")
+        assert.equal(expected, actual)
+    end)
 
-		assert.equal(expected, actual)
-	end)
+    it("returns the test binary for tests/testsuite/main.rs", function()
+        assert(testsuite_actual)
+        local expected = root .. "/target/debug/deps/testsuite-"
+        local actual = strings.truncate(testsuite_actual, testsuite_actual:len() - 16, "-")
 
-	it("returns the test binary for tests/test_it.rs", function()
-
-		local expected = root .. "/target/debug/deps/test_it-6a27e87431b46ac9"
-		local actual = dap.get_test_binary(root, root .. "/tests/test_it.rs")
-
-		assert.equal(expected, actual)
-	end)
-
-	it("returns the test binary for tests/testsuite/it.rs", function()
-
-		local expected = root .. "/target/debug/deps/testsuite-37806187190b2d0b"
-		local actual = dap.get_test_binary(root, root .. "/tests/testsuite/it.rs")
-
-		assert.equal(expected, actual)
-	end)
-
-	it("returns the test binary for tests/testsuite/main.rs", function()
-
-		local expected = root .. "/target/debug/deps/testsuite-37806187190b2d0b"
-		local actual = dap.get_test_binary(root, root .. "/tests/testsuite/main.rs")
-
-		assert.equal(expected, actual)
-	end)
+        assert.equal(expected, actual)
+    end)
 end)
 
 describe("translate_results", function()
-
     it("parses results with a single test suite in it", function()
         local path = vim.loop.cwd() .. "/tests/data/0"
 
@@ -133,7 +130,7 @@ describe("translate_results", function()
         }
 
         assert.are.same(expected, results)
-	end)
+    end)
 end)
 
 describe("build_spec", function()
@@ -148,10 +145,10 @@ describe("build_spec", function()
 
         local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
         assert.are.same(spec.strategy.args, {
-			"--nocapture",
-			"--exact",
-			"mymod::foo::tests::math",
-		})
+            "--nocapture",
+            "--exact",
+            "mymod::foo::tests::math",
+        })
         assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
     end)
 
@@ -166,9 +163,9 @@ describe("build_spec", function()
 
         local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
         assert.are.same(spec.strategy.args, {
-			"--nocapture",
-			"mymod::foo",
-		})
+            "--nocapture",
+            "mymod::foo",
+        })
         assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
     end)
 
@@ -183,9 +180,9 @@ describe("build_spec", function()
 
         local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
         assert.are.same(spec.strategy.args, {
-			"--nocapture",
-			"tests",
-		})
+            "--nocapture",
+            "tests",
+        })
         assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
     end)
 
@@ -200,13 +197,13 @@ describe("build_spec", function()
 
         local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
         assert.are.same(spec.strategy.args, {
-			"--nocapture",
-			"tests",
-		})
+            "--nocapture",
+            "tests",
+        })
         assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
     end)
 
-	-- TODO: Fix
+    -- TODO: Fix
     it("can debug tests in mod.rs", function()
         local tree = Tree:new({
             type = "file",
@@ -218,9 +215,9 @@ describe("build_spec", function()
 
         local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
         assert.are.same(spec.strategy.args, {
-			"--nocapture",
-			"mymod",
-		})
+            "--nocapture",
+            "mymod",
+        })
         assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
     end)
 
@@ -235,10 +232,10 @@ describe("build_spec", function()
 
         local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
         assert.are.same(spec.strategy.args, {
-			"--nocapture",
-			"--exact",
-			"top_level_math",
-		})
+            "--nocapture",
+            "--exact",
+            "top_level_math",
+        })
         assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
     end)
 
@@ -253,9 +250,9 @@ describe("build_spec", function()
 
         local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
         assert.are.same(spec.strategy.args, {
-			"--nocapture",
-			"tests",
-		})
+            "--nocapture",
+            "tests",
+        })
         assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
     end)
 
@@ -270,10 +267,10 @@ describe("build_spec", function()
 
         local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
         assert.are.same(spec.strategy.args, {
-			"--nocapture",
-			"--exact",
-			"testsuite_top_level_math",
-		})
+            "--nocapture",
+            "--exact",
+            "testsuite_top_level_math",
+        })
         assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
     end)
 
@@ -288,9 +285,9 @@ describe("build_spec", function()
 
         local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
         assert.are.same(spec.strategy.args, {
-			"--nocapture",
-			"tests",
-		})
+            "--nocapture",
+            "tests",
+        })
         assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
     end)
 
@@ -305,10 +302,10 @@ describe("build_spec", function()
 
         local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
         assert.are.same(spec.strategy.args, {
-			"--nocapture",
-			"--exact",
-			"it::testsuite_it_math",
-		})
+            "--nocapture",
+            "--exact",
+            "it::testsuite_it_math",
+        })
         assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
     end)
 
@@ -323,9 +320,9 @@ describe("build_spec", function()
 
         local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
         assert.are.same(spec.strategy.args, {
-			"--nocapture",
-			"it",
-		})
+            "--nocapture",
+            "it",
+        })
         assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data")
     end)
 end)

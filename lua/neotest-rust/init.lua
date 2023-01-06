@@ -125,7 +125,7 @@ function adapter.build_spec(args)
     local tmp_nextest_config = async.fn.tempname() .. ".nextest.toml"
     local junit_path = async.fn.tempname() .. ".junit.xml"
     local position = args.tree:data()
-	local cwd = adapter.root(position.path)
+    local cwd = adapter.root(position.path)
 
     local nextest_config = Path:new(cwd .. ".config/nextest.toml")
     if nextest_config:exists() then
@@ -180,39 +180,38 @@ function adapter.build_spec(args)
 
     -- Debug
     if args.strategy == "dap" then
+        -- TODO: Add --tests?
+        local dap_args = { "--nocapture" }
 
-		-- TODO: Add --tests?
-		local dap_args = { "--nocapture" }
+        if position.type == "test" then
+            context.test_filter = position.id
+            table.insert(dap_args, "--exact")
+        else
+            local position_id = path_to_test_path(position.path)
+            if position_id == nil then
+                context.test_filter = "tests"
+            else
+                context.test_filter = position_id
+            end
+        end
 
-		if position.type == 'test' then
-			context.test_filter = position.id
-			table.insert(dap_args, "--exact")
-		else
-			local position_id = path_to_test_path(position.path)
-			if position_id == nil then
-				context.test_filter = "tests"
-			else
-				context.test_filter = position_id
-			end
-		end
+        table.insert(dap_args, context.test_filter)
 
-		table.insert(dap_args, context.test_filter)
+        local strategy = {
+            name = "Debug Rust Tests",
+            type = "lldb",
+            request = "launch",
+            cwd = cwd or "${workspaceFolder}",
+            stopOnEntry = false,
+            args = dap_args,
+            program = dap.get_test_binary(cwd, position.path),
+        }
 
-		local strategy = {
-			name = "Debug Rust Tests",
-			type = "lldb",
-			request = "launch",
-			cwd = cwd or "${workspaceFolder}",
-			stopOnEntry = false,
-			args = dap_args,
-			program = dap.get_test_binary(cwd, position.path),
-		}
-
-		return {
-			cwd = cwd,
-			context = context,
-			strategy = strategy,
-		}
+        return {
+            cwd = cwd,
+            context = context,
+            strategy = strategy,
+        }
     end
 
     -- Run

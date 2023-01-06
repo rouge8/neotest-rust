@@ -25,4 +25,3 @@ failures:
     tests::failed_math
 
 test result: FAILED. 3 passed; 1 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
-
