@@ -504,7 +504,6 @@ describe("results", function()
         local spec = { context = { junit_path = path } }
 
         local results = adapter.results(spec, nil, nil)
-        print(vim.inspect(results))
 
         local expected = {
             ["foo::tests::should_fail"] = {
