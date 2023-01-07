@@ -24,7 +24,7 @@ local function get_src_paths(root)
 
     local line = handle:read("l")
     while line do
-		print(line)
+        print(line)
         if string.find(line, src_filter) and string.find(line, exe_filter) then
             local src_path = string.match(line, src_filter)
             local executable = string.match(line, exe_filter)
@@ -99,11 +99,11 @@ local function search_modules(src_path, path)
         if path == mod_path then
             return true
         elseif search_modules(mod_path, path) then
-			return true
+            return true
         end
     end
 
-	return false
+    return false
 end
 
 -- Debugging is only possible from the generated test binary
