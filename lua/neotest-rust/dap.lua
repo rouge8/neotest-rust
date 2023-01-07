@@ -14,17 +14,33 @@ M.file_exists = function(file)
     end
 end
 
+--
+--{
+--  "target": {
+--    "src_path": "/home/mark/workspace/Lua/neotest-rust/tests/data/src/lib.rs",
+--  },
+--  "executable": "/home/mark/workspace/Lua/neotest-rust/tests/data/target/debug/deps/data-<>",
+--}
+--
+-- Return a table containing each 'src_path' => 'executable' listed by
+-- 'cargo test --message-format=JSON' (see sample output above).
 local function get_src_paths(root)
-    local cmd = "cargo test --no-run --message-format=JSON --manifest-path=" .. root .. sep .. "Cargo.toml --quiet"
-    local handle = assert(io.popen(cmd))
-
     local src_paths = {}
     local src_filter = '"src_path":"(.+' .. sep .. '.+.rs)",'
     local exe_filter = '"executable":"(.+' .. sep .. "deps" .. sep .. '.+)",'
 
+    local cmd = {
+        "cargo",
+        "test",
+        "--manifest-path=" .. root .. sep .. "Cargo.toml",
+        "--message-format=JSON",
+        "--no-run",
+        "--quiet",
+    }
+    local handle = assert(io.popen(table.concat(cmd, " ")))
     local line = handle:read("l")
+
     while line do
-        print(line)
         if string.find(line, src_filter) and string.find(line, exe_filter) then
             local src_path = string.match(line, src_filter)
             local executable = string.match(line, exe_filter)
@@ -58,6 +74,7 @@ local function collect(query, source, root)
     return mods
 end
 
+-- Get the list of <mod_name>s imported via '(pub) mod <mod_name>;'
 local function get_mods(path)
     local content = lib.files.read(path)
     local query = [[
@@ -73,26 +90,26 @@ local function get_mods(path)
     return collect(parsed_query, content, root)
 end
 
-local function construct_mod_path(src_path, mod)
+-- Determine if mod is in <mod_name>.rs or <mod_name>/mod.rs
+local function construct_mod_path(src_path, mod_name)
     local match_str = "(.-)[^\\/]-%.?(%w+)%.?[^\\/]*$"
     local abs_path, _ = string.match(src_path, match_str)
 
-    local mod_file = abs_path .. mod .. ".rs"
-    local mod_dir = abs_path .. mod .. sep .. "mod.rs"
+    local mod_file = abs_path .. mod_name .. ".rs"
+    local mod_dir = abs_path .. mod_name .. sep .. "mod.rs"
 
     if M.file_exists(mod_file) then
         return mod_file
     elseif M.file_exists(mod_dir) then
         return mod_dir
     end
+
+    return nil
 end
 
+-- Recursive search for 'path' amongst all modules declared in 'src_path'
 local function search_modules(src_path, path)
     local mods = get_mods(src_path)
-
-    if mods == {} then
-        return false
-    end
 
     for _, mod in ipairs(mods) do
         local mod_path = construct_mod_path(src_path, mod)
