@@ -15,6 +15,10 @@ local get_args = function()
     return {}
 end
 
+local get_dap_adapter = function()
+    return "lldb"
+end
+
 local is_callable = function(obj)
     return type(obj) == "function" or (type(obj) == "table" and obj.__call)
 end
@@ -199,7 +203,7 @@ function adapter.build_spec(args)
 
         local strategy = {
             name = "Debug Rust Tests",
-            type = "lldb",
+            type = get_dap_adapter(),
             request = "launch",
             cwd = cwd or "${workspaceFolder}",
             stopOnEntry = false,
@@ -275,6 +279,13 @@ setmetatable(adapter, {
         elseif opts.args then
             get_args = function()
                 return opts.args
+            end
+        end
+        if is_callable(opts.dap_adapter) then
+            get_dap_adapter = opts.dap_adapter
+        elseif opts.dap_adapter then
+            get_dap_adapter = function()
+                return opts.dap_adapter
             end
         end
         return adapter
