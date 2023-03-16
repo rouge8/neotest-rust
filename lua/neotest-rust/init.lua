@@ -143,7 +143,7 @@ function adapter.build_spec(args)
     end
 
     with(open(tmp_nextest_config, "a"), function(writer)
-        writer:write('[profile.neotest.junit]\npath = "' .. junit_path .. '"')
+        writer:write("[profile.neotest.junit]\npath = '" .. junit_path .. "'")
     end)
 
     local command = vim.tbl_flatten({
