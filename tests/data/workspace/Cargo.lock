@@ -3,5 +3,9 @@
 version = 3
 
 [[package]]
-name = "data"
+name = "with_integration_tests"
+version = "0.1.0"
+
+[[package]]
+name = "with_unit_tests"
 version = "0.1.0"

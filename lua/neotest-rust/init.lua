@@ -1,14 +1,29 @@
 local async = require("neotest.async")
 local context_manager = require("plenary.context_manager")
-local lib = require("neotest.lib")
+local Job = require("plenary.job")
 local open = context_manager.open
 local Path = require("plenary.path")
+local lib = require("neotest.lib")
 local with = context_manager.with
 local xml = require("neotest.lib.xml")
 
 local adapter = { name = "neotest-rust" }
 
-adapter.root = lib.files.match_root_pattern("Cargo.toml")
+function adapter.root(dir)
+    local cwd = lib.files.match_root_pattern("Cargo.toml")(dir)
+
+    local metadata
+    Job:new({
+        command = "cargo",
+        args = { "metadata" },
+        cwd = cwd,
+        on_exit = function(j, return_val)
+            metadata = vim.json.decode(j:result()[1])
+        end,
+    }):sync()
+
+    return metadata.workspace_root
+end
 
 local get_args = function()
     return {}
@@ -22,12 +37,14 @@ function adapter.is_test_file(file_path)
     return vim.endswith(file_path, ".rs") and #adapter.discover_positions(file_path):to_list() ~= 1
 end
 
+local get_package_root = lib.files.match_root_pattern("Cargo.toml")
+
 local function is_unit_test(path)
-    return vim.startswith(path, adapter.root(path) .. Path.path.sep .. "src" .. Path.path.sep)
+    return vim.startswith(path, get_package_root(path) .. Path.path.sep .. "src" .. Path.path.sep)
 end
 
 local function is_integration_test(path)
-    return vim.startswith(path, adapter.root(path) .. Path.path.sep .. "tests" .. Path.path.sep)
+    return vim.startswith(path, get_package_root(path) .. Path.path.sep .. "tests" .. Path.path.sep)
 end
 
 local function file_exists(file)
@@ -42,7 +59,7 @@ local function file_exists(file)
 end
 
 local function path_to_test_path(path)
-    local root = adapter.root(path)
+    local root = get_package_root(path)
     -- main.rs, lib.rs, and mod.rs aren't part of the test name
     for _, filename in ipairs({ "main", "lib", "mod" }) do
         path = path:gsub(filename .. ".rs$", "")
@@ -79,10 +96,10 @@ local function path_to_test_path(path)
 end
 
 local function integration_test_name(path)
-    local root = adapter.root(path)
+    local package_root = get_package_root(path)
 
     path = Path:new(path)
-    path = path:make_relative(root .. Path.path.sep .. "tests")
+    path = path:make_relative(package_root .. Path.path.sep .. "tests")
     path = path:gsub(".rs$", "")
     return vim.split(path, "/")[1]
 end
@@ -162,13 +179,30 @@ function adapter.build_spec(args)
         vim.list_extend(command, { "--test", integration_test_name(position.path) })
     end
 
+    -- Determine the package name if we're in a workspace
+    local workspace_root = adapter.root(position.path) .. Path.path.sep
+    local package_root = lib.files.match_root_pattern("Cargo.toml")(position.path)
+    local package_name = (package_root:sub(0, #workspace_root) == workspace_root)
+        and package_root:sub(#workspace_root + 1)
+
+    local package_filter = ""
+    if package_name then
+        package_filter = "package(" .. package_name .. ") & "
+    end
+
     local position_id
     local test_filter
     if position.type == "test" then
         position_id = position.id
         -- TODO: Support rstest parametrized tests
-        test_filter = "-E 'test(/^" .. position_id .. "$/)'"
+        test_filter = "-E '" .. package_filter .. "test(/^" .. position_id .. "$/)'"
     elseif position.type == "file" then
+        if package_name then
+            -- A basic filter to run tests within the package that will be
+            -- overridden later if 'position_id' is not nil
+            test_filter = "-E 'package(" .. package_name .. ")'"
+        end
+
         position_id = path_to_test_path(position.path)
 
         if is_unit_test(position.path) and position_id == nil then
@@ -178,7 +212,7 @@ function adapter.build_spec(args)
 
         if position_id then
             -- Either a unit test or an integration test in a subdirectory
-            test_filter = "-E 'test(/^" .. position_id .. "::/)'"
+            test_filter = "-E '" .. package_filter .. "test(/^" .. position_id .. "::/)'"
         end
     end
     table.insert(command, test_filter)

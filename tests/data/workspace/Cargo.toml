@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+  "with_unit_tests",
+  "with_integration_tests",
+]
