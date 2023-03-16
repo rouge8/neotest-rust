@@ -524,4 +524,23 @@ describe("results", function()
 
         assert.are.same(expected, results)
     end)
+
+    it("returns the cargo-nextest output if there is no junit file", function()
+        local adapter = require("neotest-rust")({})
+        local path = vim.loop.cwd() .. "/does-not-exist.xml"
+        local position_id = "some_test"
+        local spec = { context = { junit_path = path, position_id = position_id } }
+        local strategy_result = { code = 101, output = "/some/path" }
+
+        local results = adapter.results(spec, strategy_result, nil)
+
+        local expected = {
+            [position_id] = {
+                output = "/some/path",
+                status = "failed",
+            },
+        }
+
+        assert.are.same(expected, results)
+    end)
 end)

@@ -30,6 +30,17 @@ local function is_integration_test(path)
     return vim.startswith(path, adapter.root(path) .. Path.path.sep .. "tests" .. Path.path.sep)
 end
 
+local function file_exists(file)
+    local f = io.open(file, "r")
+
+    if f ~= nil then
+        io.close(f)
+        return true
+    else
+        return false
+    end
+end
+
 local function path_to_test_path(path)
     local root = adapter.root(path)
     -- main.rs, lib.rs, and mod.rs aren't part of the test name
@@ -151,12 +162,14 @@ function adapter.build_spec(args)
         vim.list_extend(command, { "--test", integration_test_name(position.path) })
     end
 
+    local position_id
     local test_filter
     if position.type == "test" then
+        position_id = position.id
         -- TODO: Support rstest parametrized tests
-        test_filter = "-E 'test(/^" .. position.id .. "$/)'"
+        test_filter = "-E 'test(/^" .. position_id .. "$/)'"
     elseif position.type == "file" then
-        local position_id = path_to_test_path(position.path)
+        position_id = path_to_test_path(position.path)
 
         if is_unit_test(position.path) and position_id == nil then
             -- main.rs or lib.rs
@@ -177,45 +190,53 @@ function adapter.build_spec(args)
             junit_path = junit_path,
             file = position.path,
             test_filter = test_filter,
+            position_id = position_id,
         },
     }
 end
 
 function adapter.results(spec, result, tree)
-    local data
-    with(open(spec.context.junit_path, "r"), function(reader)
-        data = reader:read("*a")
-    end)
-
-    local root = xml.parse(data)
-
     local results = {}
 
-    local testsuites
-    if #root.testsuites.testsuite == 0 then
-        testsuites = { root.testsuites.testsuite }
-    else
-        testsuites = root.testsuites.testsuite
-    end
-    for _, testsuite in pairs(testsuites) do
-        local testcases
-        if #testsuite.testcase == 0 then
-            testcases = { testsuite.testcase }
+    if file_exists(spec.context.junit_path) then
+        local data
+        with(open(spec.context.junit_path, "r"), function(reader)
+            data = reader:read("*a")
+        end)
+
+        local root = xml.parse(data)
+
+        local testsuites
+        if #root.testsuites.testsuite == 0 then
+            testsuites = { root.testsuites.testsuite }
         else
-            testcases = testsuite.testcase
+            testsuites = root.testsuites.testsuite
         end
-        for _, testcase in pairs(testcases) do
-            if testcase.failure then
-                results[testcase._attr.name] = {
-                    status = "failed",
-                    short = testcase.failure[1],
-                }
+        for _, testsuite in pairs(testsuites) do
+            local testcases
+            if #testsuite.testcase == 0 then
+                testcases = { testsuite.testcase }
             else
-                results[testcase._attr.name] = {
-                    status = "passed",
-                }
+                testcases = testsuite.testcase
+            end
+            for _, testcase in pairs(testcases) do
+                if testcase.failure then
+                    results[testcase._attr.name] = {
+                        status = "failed",
+                        short = testcase.failure[1],
+                    }
+                else
+                    results[testcase._attr.name] = {
+                        status = "passed",
+                    }
+                end
             end
         end
+    else
+        results[spec.context.position_id] = {
+            status = "failed",
+            output = result.output,
+        }
     end
 
     return results
