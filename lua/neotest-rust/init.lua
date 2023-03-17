@@ -12,6 +12,10 @@ local adapter = { name = "neotest-rust" }
 function adapter.root(dir)
     local cwd = lib.files.match_root_pattern("Cargo.toml")(dir)
 
+    if cwd == nil then
+        return
+    end
+
     local metadata
     Job:new({
         command = "cargo",
