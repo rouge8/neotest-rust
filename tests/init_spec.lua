@@ -296,6 +296,42 @@ describe("discover_positions", function()
 
         assert.are.same(positions, expected_positions)
     end)
+
+    async.it("discovers positions when there are multiple macros present", function()
+        local positions = plugin
+            .discover_positions(vim.loop.cwd() .. "/tests/data/simple-package/src/mymod/multiple_macros.rs")
+            :to_list()
+
+        local expected_positions = {
+            {
+                id = vim.loop.cwd() .. "/tests/data/simple-package/src/mymod/multiple_macros.rs",
+                name = "multiple_macros.rs",
+                path = vim.loop.cwd() .. "/tests/data/simple-package/src/mymod/multiple_macros.rs",
+                range = { 0, 0, 15, 0 },
+                type = "file",
+            },
+            {
+                {
+                    id = "mymod::multiple_macros::should_panic_last",
+                    name = "should_panic_last",
+                    path = vim.loop.cwd() .. "/tests/data/simple-package/src/mymod/multiple_macros.rs",
+                    range = { 2, 0, 4, 1 },
+                    type = "test",
+                },
+            },
+            {
+                {
+                    id = "mymod::multiple_macros::should_panic_first",
+                    name = "should_panic_first",
+                    path = vim.loop.cwd() .. "/tests/data/simple-package/src/mymod/multiple_macros.rs",
+                    range = { 8, 0, 10, 1 },
+                    type = "test",
+                },
+            },
+        }
+
+        assert.are.same(positions, expected_positions)
+    end)
 end)
 
 describe("build_spec", function()
