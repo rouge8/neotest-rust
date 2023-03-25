@@ -33,8 +33,6 @@ tests.
 
 ## Limitations
 
-- Does not support running the whole test suite, only individual tests or
-  files.
 - Assumes unit tests in `main.rs`, `mod.rs`, and `lib.rs` are in a `tests`
   module.
 - Does not support `rstest`'s `#[case]` macro.
