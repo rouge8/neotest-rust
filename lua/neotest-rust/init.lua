@@ -255,9 +255,9 @@ function adapter.results(spec, result, tree)
         else
             testsuites = root.testsuites.testsuite
         end
-	if testsuites == nil then
-	    return results
-	end
+        if testsuites == nil then
+            return results
+        end
         for _, testsuite in pairs(testsuites) do
             local testcases
             if #testsuite.testcase == 0 then
