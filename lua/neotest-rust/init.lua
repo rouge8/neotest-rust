@@ -250,11 +250,14 @@ function adapter.results(spec, result, tree)
         local root = xml.parse(data)
 
         local testsuites
-        if #root.testsuites.testsuite == 0 then
+        if not root.testsuites.testsuite == nil and #root.testsuites.testsuite == 0 then
             testsuites = { root.testsuites.testsuite }
         else
             testsuites = root.testsuites.testsuite
         end
+	if testsuites == nil then
+	    return results
+	end
         for _, testsuite in pairs(testsuites) do
             local testcases
             if #testsuite.testcase == 0 then
