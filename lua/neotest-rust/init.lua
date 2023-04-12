@@ -1,5 +1,7 @@
 local async = require("neotest.async")
 local context_manager = require("plenary.context_manager")
+local dap = require("neotest-rust.dap")
+local util = require("neotest-rust.util")
 local Job = require("plenary.job")
 local open = context_manager.open
 local Path = require("plenary.path")
@@ -33,6 +35,10 @@ local get_args = function()
     return {}
 end
 
+local get_dap_adapter = function()
+    return "codelldb"
+end
+
 local is_callable = function(obj)
     return type(obj) == "function" or (type(obj) == "table" and obj.__call)
 end
@@ -49,17 +55,6 @@ end
 
 local function is_integration_test(path)
     return vim.startswith(path, get_package_root(path) .. Path.path.sep .. "tests" .. Path.path.sep)
-end
-
-local function file_exists(file)
-    local f = io.open(file, "r")
-
-    if f ~= nil then
-        io.close(f)
-        return true
-    else
-        return false
-    end
 end
 
 local function path_to_test_path(path)
@@ -162,8 +157,9 @@ function adapter.build_spec(args)
     local tmp_nextest_config = async.fn.tempname() .. ".nextest.toml"
     local junit_path = async.fn.tempname() .. ".junit.xml"
     local position = args.tree:data()
+    local cwd = adapter.root(position.path)
 
-    local nextest_config = Path:new(adapter.root(position.path) .. ".config/nextest.toml")
+    local nextest_config = Path:new(cwd .. ".config/nextest.toml")
     if nextest_config:exists() then
         nextest_config:copy({ destination = tmp_nextest_config })
     end
@@ -226,22 +222,68 @@ function adapter.build_spec(args)
     end
     table.insert(command, test_filter)
 
+    local context = {
+        junit_path = junit_path,
+        file = position.path,
+        test_filter = test_filter,
+        position_id = position_id,
+        strategy = args.strategy,
+    }
+
+    -- Debug
+    if args.strategy == "dap" then
+        local dap_args = { "--nocapture" }
+
+        if position.type == "test" then
+            context.test_filter = position.id
+            table.insert(dap_args, "--exact")
+        else
+            position_id = path_to_test_path(position.path)
+            if position_id == nil then
+                context.test_filter = "tests"
+            else
+                context.test_filter = position_id
+            end
+        end
+
+        table.insert(dap_args, context.test_filter)
+
+        local strategy = {
+            name = "Debug Rust Tests",
+            type = get_dap_adapter(),
+            request = "launch",
+            cwd = cwd or "${workspaceFolder}",
+            stopOnEntry = false,
+            args = dap_args,
+            program = dap.get_test_binary(cwd, position.path),
+        }
+
+        -- codelldb must be provided with a file for stdout in its launch parameters.
+        -- https://github.com/vadimcn/codelldb/blob/v1.9.0/MANUAL.md#stdio-redirection
+        if get_dap_adapter() == "codelldb" then
+            strategy["stdio"] = { nil, async.fn.tempname() }
+        end
+
+        return {
+            cwd = cwd,
+            context = context,
+            strategy = strategy,
+        }
+    end
+
+    -- Run
     return {
         command = table.concat(command, " "),
-        cwd = adapter.root(position.path),
-        context = {
-            junit_path = junit_path,
-            file = position.path,
-            test_filter = test_filter,
-            position_id = position_id,
-        },
+        cwd = cwd,
+        context = context,
     }
 end
 
 function adapter.results(spec, result, tree)
     local results = {}
+    local output_path = spec.strategy.stdio and spec.strategy.stdio[2] or result.output
 
-    if file_exists(spec.context.junit_path) then
+    if util.file_exists(spec.context.junit_path) then
         local data
         with(open(spec.context.junit_path, "r"), function(reader)
             data = reader:read("*a")
@@ -275,6 +317,8 @@ function adapter.results(spec, result, tree)
                 end
             end
         end
+    elseif spec.context.strategy == "dap" and util.file_exists(output_path) then
+        results = dap.translate_results(output_path)
     else
         results[spec.context.position_id] = {
             status = "failed",
@@ -292,6 +336,13 @@ setmetatable(adapter, {
         elseif opts.args then
             get_args = function()
                 return opts.args
+            end
+        end
+        if is_callable(opts.dap_adapter) then
+            get_dap_adapter = opts.dap_adapter
+        elseif opts.dap_adapter then
+            get_dap_adapter = function()
+                return opts.dap_adapter
             end
         end
         return adapter

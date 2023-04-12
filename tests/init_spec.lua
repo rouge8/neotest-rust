@@ -579,15 +579,283 @@ describe("build_spec", function()
             assert.matches(".+ %-%-test it", spec.command)
         end)
     end)
+
+    describe("debug adapter protocol", function()
+        describe("for a simple-package", function()
+            async.it("can debug a single test", function()
+                local tree = Tree:new({
+                    type = "test",
+                    path = vim.loop.cwd() .. "/tests/data/simple-package/src/mymod/foo.rs",
+                    id = "mymod::foo::tests::math",
+                }, {}, function(data)
+                    return data
+                end, {})
+
+                local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+                assert.are.same(spec.strategy.args, {
+                    "--nocapture",
+                    "--exact",
+                    "mymod::foo::tests::math",
+                })
+                assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/simple-package")
+            end)
+
+            async.it("can debug a test file", function()
+                local tree = Tree:new({
+                    type = "file",
+                    path = vim.loop.cwd() .. "/tests/data/simple-package/src/mymod/foo.rs",
+                    id = vim.loop.cwd() .. "/tests/data/simple-package/src/mymod/foo.rs",
+                }, {}, function(data)
+                    return data
+                end, {})
+
+                local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+                assert.are.same(spec.strategy.args, {
+                    "--nocapture",
+                    "mymod::foo",
+                })
+                assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/simple-package")
+            end)
+
+            async.it("can debug tests in main.rs", function()
+                local tree = Tree:new({
+                    type = "file",
+                    path = vim.loop.cwd() .. "/tests/data/simple-package/src/main.rs",
+                    id = vim.loop.cwd() .. "/tests/data/simple-package/src/main.rs",
+                }, {}, function(data)
+                    return data
+                end, {})
+
+                local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+                assert.are.same(spec.strategy.args, {
+                    "--nocapture",
+                    "tests",
+                })
+                assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/simple-package")
+            end)
+
+            async.it("can debug tests in lib.rs", function()
+                local tree = Tree:new({
+                    type = "file",
+                    path = vim.loop.cwd() .. "/tests/data/simple-package/src/lib.rs",
+                    id = vim.loop.cwd() .. "/tests/data/simple-package/src/lib.rs",
+                }, {}, function(data)
+                    return data
+                end, {})
+
+                local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+                assert.are.same(spec.strategy.args, {
+                    "--nocapture",
+                    "tests",
+                })
+                assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/simple-package")
+            end)
+
+            async.it("can debug tests in mod.rs", function()
+                local tree = Tree:new({
+                    type = "file",
+                    path = vim.loop.cwd() .. "/tests/data/simple-package/src/mymod/mod.rs",
+                    id = vim.loop.cwd() .. "/tests/data/simple-package/src/mymod/mod.rs",
+                }, {}, function(data)
+                    return data
+                end, {})
+
+                local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+                assert.are.same(spec.strategy.args, {
+                    "--nocapture",
+                    "mymod",
+                })
+                assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/simple-package")
+            end)
+
+            async.it("can debug a single integration test", function()
+                local tree = Tree:new({
+                    type = "test",
+                    path = vim.loop.cwd() .. "/tests/data/simple-package/tests/test_it.rs",
+                    id = "top_level_math",
+                }, {}, function(data)
+                    return data
+                end, {})
+
+                local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+                assert.are.same(spec.strategy.args, {
+                    "--nocapture",
+                    "--exact",
+                    "top_level_math",
+                })
+                assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/simple-package")
+            end)
+
+            async.it("can debug a file of integration tests", function()
+                local tree = Tree:new({
+                    type = "file",
+                    path = vim.loop.cwd() .. "/tests/data/simple-package/tests/test_it.rs",
+                    id = vim.loop.cwd() .. "/tests/data/simple-package/src/tests/test_it.rs",
+                }, {}, function(data)
+                    return data
+                end, {})
+
+                local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+                assert.are.same(spec.strategy.args, {
+                    "--nocapture",
+                    "tests",
+                })
+                assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/simple-package")
+            end)
+
+            async.it("can debug an integration test in main.rs in a subdirectory", function()
+                local tree = Tree:new({
+                    type = "test",
+                    path = vim.loop.cwd() .. "/tests/data/simple-package/tests/testsuite/main.rs",
+                    id = "testsuite_top_level_math",
+                }, {}, function(data)
+                    return data
+                end, {})
+
+                local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+                assert.are.same(spec.strategy.args, {
+                    "--nocapture",
+                    "--exact",
+                    "testsuite_top_level_math",
+                })
+                assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/simple-package")
+            end)
+
+            async.it("can debug all integration tests in main.rs in a subdirectory", function()
+                local tree = Tree:new({
+                    type = "file",
+                    path = vim.loop.cwd() .. "/tests/data/simple-package/tests/testsuite/main.rs",
+                    id = vim.loop.cwd() .. "/tests/data/simple-package/src/tests/testsuite/main.rs",
+                }, {}, function(data)
+                    return data
+                end, {})
+
+                local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+                assert.are.same(spec.strategy.args, {
+                    "--nocapture",
+                    "tests",
+                })
+                assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/simple-package")
+            end)
+
+            async.it("can debug an integration test in another test file in a subdirectory", function()
+                local tree = Tree:new({
+                    type = "test",
+                    path = vim.loop.cwd() .. "/tests/data/simple-package/tests/testsuite/it.rs",
+                    id = "it::testsuite_it_math",
+                }, {}, function(data)
+                    return data
+                end, {})
+
+                local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+                assert.are.same(spec.strategy.args, {
+                    "--nocapture",
+                    "--exact",
+                    "it::testsuite_it_math",
+                })
+                assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/simple-package")
+            end)
+
+            async.it("can debug all integration tests in another test file in a subdirectory", function()
+                local tree = Tree:new({
+                    type = "file",
+                    path = vim.loop.cwd() .. "/tests/data/simple-package/tests/testsuite/it.rs",
+                    id = "it::",
+                }, {}, function(data)
+                    return data
+                end, {})
+
+                local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+                assert.are.same(spec.strategy.args, {
+                    "--nocapture",
+                    "it",
+                })
+                assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/simple-package")
+            end)
+        end)
+
+        describe("for a workspace", function()
+            it("can debug a single test", function()
+                local tree = Tree:new({
+                    type = "test",
+                    path = vim.loop.cwd() .. "/tests/data/workspace/with_unit_tests/src/main.rs",
+                    id = "test_it",
+                }, {}, function(data)
+                    return data
+                end, {})
+
+                local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+                assert.are.same(spec.strategy.args, {
+                    "--nocapture",
+                    "--exact",
+                    "test_it",
+                })
+                assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/workspace")
+            end)
+
+            it("can debug a test file", function()
+                local tree = Tree:new({
+                    type = "file",
+                    path = vim.loop.cwd() .. "/tests/data/workspace/with_unit_tests/src/main.rs",
+                    id = vim.loop.cwd() .. "/tests/data/workspace/with_unit_tests/src/main.rs",
+                }, {}, function(data)
+                    return data
+                end, {})
+
+                local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+                assert.are.same(spec.strategy.args, {
+                    "--nocapture",
+                    "tests",
+                })
+                assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/workspace")
+            end)
+
+            it("can debug a single integration test", function()
+                local tree = Tree:new({
+                    type = "test",
+                    path = vim.loop.cwd() .. "/tests/data/workspace/with_integration_tests/tests/it.rs",
+                    id = "it_works",
+                }, {}, function(data)
+                    return data
+                end, {})
+
+                local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+                assert.are.same(spec.strategy.args, {
+                    "--nocapture",
+                    "--exact",
+                    "it_works",
+                })
+                assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/workspace")
+            end)
+
+            it("can debug a file of integration tests", function()
+                local tree = Tree:new({
+                    type = "file",
+                    path = vim.loop.cwd() .. "/tests/data/workspace/with_integration_tests/tests/it.rs",
+                    id = vim.loop.cwd() .. "/tests/data/workspace/with_integration_tests/tests/it.rs",
+                }, {}, function(data)
+                    return data
+                end, {})
+
+                local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+                assert.are.same(spec.strategy.args, {
+                    "--nocapture",
+                    "tests",
+                })
+                assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/workspace")
+            end)
+        end)
+    end)
 end)
 
 describe("results", function()
     it("parses results with a single test suite in it", function()
         local adapter = require("neotest-rust")({})
         local path = vim.loop.cwd() .. "/tests/data/simple-package/single_test_suite.xml"
-        local spec = { context = { junit_path = path } }
+        local spec = { context = { junit_path = path }, strategy = { stdio = nil } }
+        local strategy_result = { code = 101, output = "/some/path" }
 
-        local results = adapter.results(spec, nil, nil)
+        local results = adapter.results(spec, strategy_result, nil)
 
         local expected = {
             ["foo::tests::should_fail"] = {
@@ -605,9 +873,10 @@ describe("results", function()
     it("parses results with a multiple test suites in it", function()
         local adapter = require("neotest-rust")({})
         local path = vim.loop.cwd() .. "/tests/data/simple-package/multiple_test_suites.xml"
-        local spec = { context = { junit_path = path } }
+        local spec = { context = { junit_path = path }, strategy = { stdio = nil } }
+        local strategy_result = { code = 101, output = "/some/path" }
 
-        local results = adapter.results(spec, nil, nil)
+        local results = adapter.results(spec, strategy_result, nil)
 
         local expected = {
             ["foo::tests::should_fail"] = {
@@ -629,11 +898,63 @@ describe("results", function()
         assert.are.same(expected, results)
     end)
 
+    it("parses raw results from result.output after debugging", function()
+        local adapter = require("neotest-rust")({})
+        local path = vim.loop.cwd() .. "/tests/data/simple-package/does-not-exist.xml"
+        local spec = { context = { junit_path = path, strategy = "dap" }, strategy = { stdio = nil } }
+        local strategy_result = { code = 101, output = vim.loop.cwd() .. "/tests/data/simple-package/1" }
+
+        local results = adapter.results(spec, strategy_result, nil)
+
+        local expected = {
+            ["tests::math"] = {
+                status = "passed",
+            },
+        }
+
+        assert.are.same(expected, results)
+    end)
+
+    it("parses raw results from strategy.stdio after debugging with codelldb", function()
+        local adapter = require("neotest-rust")({})
+        local path = vim.loop.cwd() .. "/tests/data/simple-package/does-not-exist.xml"
+        local spec = {
+            context = { junit_path = path, strategy = "dap" },
+            strategy = { stdio = { nil, vim.loop.cwd() .. "/tests/data/simple-package/3" } },
+        }
+        local strategy_result = { code = 101, output = vim.loop.cwd() .. "/tests/data/simple-package/1" }
+
+        local results = adapter.results(spec, strategy_result, nil)
+
+        local expected = {
+            ["tests::math"] = {
+                status = "passed",
+            },
+            ["tests::basic_math"] = {
+                status = "skipped",
+            },
+            ["mymod::foo::tests::math"] = {
+                status = "passed",
+            },
+            ["mymod::tests::math"] = {
+                status = "passed",
+            },
+            ["tests::nested::nested_math"] = {
+                status = "passed",
+            },
+            ["tests::failed_math"] = {
+                status = "failed",
+            },
+        }
+
+        assert.are.same(expected, results)
+    end)
+
     it("returns the cargo-nextest output if there is no junit file", function()
         local adapter = require("neotest-rust")({})
         local path = vim.loop.cwd() .. "/does-not-exist.xml"
         local position_id = "some_test"
-        local spec = { context = { junit_path = path, position_id = position_id } }
+        local spec = { context = { junit_path = path, position_id = position_id }, strategy = { stdio = nil } }
         local strategy_result = { code = 101, output = "/some/path" }
 
         local results = adapter.results(spec, strategy_result, nil)
