@@ -1,4 +1,4 @@
-local async = require("plenary.async.tests")
+local async = require("nio.tests")
 local plugin = require("neotest-rust")
 local Tree = require("neotest.types").Tree
 
