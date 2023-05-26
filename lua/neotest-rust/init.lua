@@ -104,7 +104,7 @@ local function integration_test_name(path)
 end
 
 function adapter.discover_positions(path)
-    local query = [[
+    local query = [[;; query
 (
   (attribute_item
     [
@@ -121,11 +121,14 @@ function adapter.discover_positions(path)
       )
     ]
   )
+  [
   (attribute_item
     (attribute
       (identifier)
     )
-  )*
+  )
+  (line_comment)
+  ]*
   .
   (function_item
     name: (identifier) @test.name
