@@ -57,6 +57,13 @@ local function is_integration_test(path)
     return vim.startswith(path, get_package_root(path) .. Path.path.sep .. "tests" .. Path.path.sep)
 end
 
+local function is_alternate_binary(path)
+    return vim.startswith(
+        path,
+        get_package_root(path) .. Path.path.sep .. "src" .. Path.path.sep .. "bin" .. Path.path.sep
+    )
+end
+
 local function path_to_test_path(path)
     local root = get_package_root(path)
     -- main.rs, lib.rs, and mod.rs aren't part of the test name
@@ -68,6 +75,9 @@ local function path_to_test_path(path)
     path = path:gsub(".rs$", "")
 
     if is_unit_test(path) then
+        if is_alternate_binary(path) then
+            return nil
+        end
         path = Path:new(path)
         path = path:make_relative(root .. Path.path.sep .. "src")
     else
@@ -99,6 +109,15 @@ local function integration_test_name(path)
 
     path = Path:new(path)
     path = path:make_relative(package_root .. Path.path.sep .. "tests")
+    path = path:gsub(".rs$", "")
+    return vim.split(path, "/")[1]
+end
+
+local function binary_name(path)
+    local package_root = get_package_root(path)
+
+    path = Path:new(path)
+    path = path:make_relative(package_root .. Path.path.sep .. "src" .. Path.path.sep .. "bin")
     path = path:gsub(".rs$", "")
     return vim.split(path, "/")[1]
 end
@@ -185,6 +204,10 @@ function adapter.build_spec(args)
 
     if is_integration_test(position.path) then
         vim.list_extend(command, { "--test", integration_test_name(position.path) })
+    end
+
+    if is_alternate_binary(position.path) then
+        vim.list_extend(command, { "--bin", binary_name(position.path) })
     end
 
     -- Determine the package name if we're in a workspace
