@@ -79,6 +79,41 @@ describe("discover_positions", function()
         assert.are.same(positions, expected_positions)
     end)
 
+    async.it("discovers positions in unit tests in alt-bin.rs", function()
+        local positions =
+            plugin.discover_positions(vim.loop.cwd() .. "/tests/data/simple-package/src/bin/alt-bin.rs"):to_list()
+
+        local expected_positions = {
+            {
+                id = vim.loop.cwd() .. "/tests/data/simple-package/src/bin/alt-bin.rs",
+                name = "alt-bin.rs",
+                path = vim.loop.cwd() .. "/tests/data/simple-package/src/bin/alt-bin.rs",
+                range = { 0, 0, 11, 0 },
+                type = "file",
+            },
+            {
+                {
+                    id = "tests",
+                    name = "tests",
+                    path = vim.loop.cwd() .. "/tests/data/simple-package/src/bin/alt-bin.rs",
+                    range = { 5, 0, 10, 1 },
+                    type = "namespace",
+                },
+                {
+                    {
+                        id = "tests::test_alt_bin",
+                        name = "test_alt_bin",
+                        path = vim.loop.cwd() .. "/tests/data/simple-package/src/bin/alt-bin.rs",
+                        range = { 7, 4, 9, 5 },
+                        type = "test",
+                    },
+                },
+            },
+        }
+
+        assert.are.same(positions, expected_positions)
+    end)
+
     async.it("discovers positions in unit tests in lib.rs", function()
         local positions = plugin.discover_positions(vim.loop.cwd() .. "/tests/data/simple-package/src/lib.rs"):to_list()
 
@@ -387,6 +422,21 @@ describe("build_spec", function()
             assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/simple-package")
         end)
 
+        it("can run tests in alt-bin.rs", function()
+            local tree = Tree:new({
+                type = "file",
+                path = vim.loop.cwd() .. "/tests/data/simple-package/src/bin/alt-bin.rs",
+                id = vim.loop.cwd() .. "/tests/data/simple-package/src/bin/alt-bin.rs",
+            }, {}, function(data)
+                return data
+            end, {})
+
+            local spec = plugin.build_spec({ tree = tree })
+            assert.is.truthy(string.find(spec.command, "%-%-bin alt%-bin"))
+            assert.equal(spec.context.test_filter, "-E 'test(/^tests::/)'")
+            assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/simple-package")
+        end)
+
         it("can run tests in lib.rs", function()
             local tree = Tree:new({
                 type = "file",
@@ -631,6 +681,23 @@ describe("build_spec", function()
                     type = "file",
                     path = vim.loop.cwd() .. "/tests/data/simple-package/src/main.rs",
                     id = vim.loop.cwd() .. "/tests/data/simple-package/src/main.rs",
+                }, {}, function(data)
+                    return data
+                end, {})
+
+                local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+                assert.are.same(spec.strategy.args, {
+                    "--nocapture",
+                    "tests",
+                })
+                assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/simple-package")
+            end)
+
+            async.it("can debug tests in alt-bin.rs", function()
+                local tree = Tree:new({
+                    type = "file",
+                    path = vim.loop.cwd() .. "/tests/data/simple-package/src/bin/alt-bin.rs",
+                    id = vim.loop.cwd() .. "/tests/data/simple-package/src/bin/alt-bin.rs",
                 }, {}, function(data)
                     return data
                 end, {})
