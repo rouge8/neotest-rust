@@ -12,6 +12,7 @@ describe("get_test_binary", function()
 
         local lib_actual = dap.get_test_binary(root, root .. "/src/lib.rs")
         local main_actual = dap.get_test_binary(root, root .. "/src/main.rs")
+        local alt_bin_actual = dap.get_test_binary(root, root .. "/src/bin/alt-bin.rs")
         local test_it_actual = dap.get_test_binary(root, root .. "/tests/test_it.rs")
         local testsuite_actual = dap.get_test_binary(root, root .. "/tests/testsuite/main.rs")
 
@@ -27,6 +28,14 @@ describe("get_test_binary", function()
             assert(main_actual)
             local expected = root .. "/target/debug/deps/simple_package-"
             local actual = strings.truncate(main_actual, main_actual:len() - 16, "-")
+
+            assert.equal(expected, actual)
+        end)
+
+        async.it("returns the test binary for src/bin/alt-bin.rs", function()
+            assert(alt_bin_actual)
+            local expected = root .. "/target/debug/deps/alt_bin-"
+            local actual = strings.truncate(alt_bin_actual, alt_bin_actual:len() - 16, "-")
 
             assert.equal(expected, actual)
         end)
