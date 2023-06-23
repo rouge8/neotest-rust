@@ -19,7 +19,7 @@ local cargo_metadata = setmetatable({}, {
         else
             Job:new({
                 command = "cargo",
-                args = { "metadata" },
+                args = { "metadata", "--no-deps" },
                 cwd = cwd,
                 on_exit = function(j, return_val)
                     metadata = vim.json.decode(j:result()[1])
