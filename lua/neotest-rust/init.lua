@@ -41,6 +41,15 @@ function adapter.root(dir)
     return cargo_metadata(cwd).workspace_root
 end
 
+local package_name_by_root = function(package_root)
+    local manifest_path = package_root .. "Cargo.toml"
+    local metadata = cargo_metadata(package_root)
+
+    return vim.tbl_filter(function(p)
+        return p.manifest_path == manifest_path
+    end, metadata.packages)[1].name
+end
+
 local get_args = function()
     return {}
 end
@@ -223,8 +232,8 @@ function adapter.build_spec(args)
     -- Determine the package name if we're in a workspace
     local workspace_root = adapter.root(position.path) .. Path.path.sep
     local package_root = lib.files.match_root_pattern("Cargo.toml")(position.path)
-    local package_name = (package_root:sub(0, #workspace_root) == workspace_root)
-        and package_root:sub(#workspace_root + 1)
+    local belongs_to_workspace = (package_root:sub(0, #workspace_root) == workspace_root)
+    local package_name = belongs_to_workspace and package_name_by_root(package_root .. Path.path.sep)
 
     local package_filter = ""
     if package_name then

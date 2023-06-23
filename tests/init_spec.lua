@@ -580,34 +580,6 @@ describe("build_spec", function()
     end)
 
     describe("for a workspace", function()
-        it("can run a single test", function()
-            local tree = Tree:new({
-                type = "test",
-                path = vim.loop.cwd() .. "/tests/data/workspace/with_unit_tests/src/main.rs",
-                id = "test_it",
-            }, {}, function(data)
-                return data
-            end, {})
-
-            local spec = plugin.build_spec({ tree = tree })
-            assert.equal(spec.context.test_filter, "-E 'package(with_unit_tests) & test(/^test_it$/)'")
-            assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/workspace")
-        end)
-
-        it("can run a test file", function()
-            local tree = Tree:new({
-                type = "file",
-                path = vim.loop.cwd() .. "/tests/data/workspace/with_unit_tests/src/main.rs",
-                id = vim.loop.cwd() .. "/tests/data/workspace/with_unit_tests/src/main.rs",
-            }, {}, function(data)
-                return data
-            end, {})
-
-            local spec = plugin.build_spec({ tree = tree })
-            assert.equal(spec.context.test_filter, "-E 'package(with_unit_tests) & test(/^tests::/)'")
-            assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/workspace")
-        end)
-
         it("can run a single integration test", function()
             local tree = Tree:new({
                 type = "test",
@@ -636,6 +608,66 @@ describe("build_spec", function()
             assert.equal(spec.context.test_filter, "-E 'package(with_integration_tests)'")
             assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/workspace")
             assert.matches(".+ %-%-test it", spec.command)
+        end)
+
+        describe("where folder name is equal to the package name", function()
+            it("can run a single test", function()
+                local tree = Tree:new({
+                    type = "test",
+                    path = vim.loop.cwd() .. "/tests/data/workspace/with_unit_tests/src/main.rs",
+                    id = "test_it",
+                }, {}, function(data)
+                    return data
+                end, {})
+
+                local spec = plugin.build_spec({ tree = tree })
+                assert.equal(spec.context.test_filter, "-E 'package(with_unit_tests) & test(/^test_it$/)'")
+                assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/workspace")
+            end)
+
+            it("can run a test file", function()
+                local tree = Tree:new({
+                    type = "file",
+                    path = vim.loop.cwd() .. "/tests/data/workspace/with_unit_tests/src/main.rs",
+                    id = vim.loop.cwd() .. "/tests/data/workspace/with_unit_tests/src/main.rs",
+                }, {}, function(data)
+                    return data
+                end, {})
+
+                local spec = plugin.build_spec({ tree = tree })
+                assert.equal(spec.context.test_filter, "-E 'package(with_unit_tests) & test(/^tests::/)'")
+                assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/workspace")
+            end)
+        end)
+
+        describe("where folder name is different than the package name", function()
+            it("can run a single test", function()
+                local tree = Tree:new({
+                    type = "test",
+                    path = vim.loop.cwd() .. "/tests/data/workspace/with_other_folder_name/src/main.rs",
+                    id = "test_it",
+                }, {}, function(data)
+                    return data
+                end, {})
+
+                local spec = plugin.build_spec({ tree = tree })
+                assert.equal(spec.context.test_filter, "-E 'package(some_other_name) & test(/^test_it$/)'")
+                assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/workspace")
+            end)
+
+            it("can run a test file", function()
+                local tree = Tree:new({
+                    type = "file",
+                    path = vim.loop.cwd() .. "/tests/data/workspace/with_other_folder_name/src/main.rs",
+                    id = vim.loop.cwd() .. "/tests/data/workspace/with_other_folder_name/src/main.rs",
+                }, {}, function(data)
+                    return data
+                end, {})
+
+                local spec = plugin.build_spec({ tree = tree })
+                assert.equal(spec.context.test_filter, "-E 'package(some_other_name) & test(/^tests::/)'")
+                assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/workspace")
+            end)
         end)
     end)
 
