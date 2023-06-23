@@ -11,6 +11,26 @@ local xml = require("neotest.lib.xml")
 
 local adapter = { name = "neotest-rust" }
 
+local cargo_metadata = setmetatable({}, {
+    __call = function(self, cwd)
+        local metadata = self[cwd]
+        if metadata ~= nil then
+            return metadata
+        else
+            Job:new({
+                command = "cargo",
+                args = { "metadata" },
+                cwd = cwd,
+                on_exit = function(j, return_val)
+                    metadata = vim.json.decode(j:result()[1])
+                end,
+            }):sync()
+            self[cwd] = metadata
+            return metadata
+        end
+    end,
+})
+
 function adapter.root(dir)
     local cwd = lib.files.match_root_pattern("Cargo.toml")(dir)
 
@@ -18,17 +38,7 @@ function adapter.root(dir)
         return
     end
 
-    local metadata
-    Job:new({
-        command = "cargo",
-        args = { "metadata" },
-        cwd = cwd,
-        on_exit = function(j, return_val)
-            metadata = vim.json.decode(j:result()[1])
-        end,
-    }):sync()
-
-    return metadata.workspace_root
+    return cargo_metadata(cwd).workspace_root
 end
 
 local get_args = function()
