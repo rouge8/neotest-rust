@@ -2,6 +2,8 @@
 # Adapted from https://github.com/nvim-neotest/neotest/blob/master/scripts/test
 tempfile=$(mktemp)
 
+unset CARGO_TARGET_DIR
+
 if [[ -n $1 ]]; then
   nvim --headless --noplugin -u tests/minimal_init.vim -c "PlenaryBustedFile $1" | tee "${tempfile}"
 else
