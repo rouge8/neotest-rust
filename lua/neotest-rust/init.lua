@@ -31,6 +31,11 @@ local cargo_metadata = setmetatable({}, {
     end,
 })
 
+---Find the project root directory given a current directory to work from.
+---Should no root be found, the adapter can still be used in a non-project context if a test file matches.
+---@async
+---@param dir string @Directory to treat as cwd
+---@return string | nil @Absolute root dir of test suite
 function adapter.root(dir)
     local cwd = lib.files.match_root_pattern("Cargo.toml")(dir)
 
@@ -62,6 +67,9 @@ local is_callable = function(obj)
     return type(obj) == "function" or (type(obj) == "table" and obj.__call)
 end
 
+---@async
+---@param file_path string
+---@return boolean
 function adapter.is_test_file(file_path)
     return vim.endswith(file_path, ".rs") and #adapter.discover_positions(file_path):to_list() ~= 1
 end
@@ -141,6 +149,10 @@ local function binary_name(path)
     return vim.split(path, "/")[1]
 end
 
+---Given a file path, parse all the tests within it.
+---@async
+---@param path string Absolute file path
+---@return neotest.Tree | nil
 function adapter.discover_positions(path)
     local query = [[;; query
 (
@@ -194,6 +206,8 @@ function adapter.discover_positions(path)
     })
 end
 
+---@param args neotest.RunArgs
+---@return nil | neotest.RunSpec | neotest.RunSpec[]
 function adapter.build_spec(args)
     local tmp_nextest_config = async.fn.tempname() .. ".nextest.toml"
     local junit_path = async.fn.tempname() .. ".junit.xml"
@@ -324,7 +338,13 @@ function adapter.build_spec(args)
     }
 end
 
+---@async
+---@param spec neotest.RunSpec
+---@param result neotest.StrategyResult
+---@param tree neotest.Tree
+---@return table<string, neotest.Result>
 function adapter.results(spec, result, tree)
+    ---@type table<string, neotest.Result>
     local results = {}
     local output_path = spec.strategy.stdio and spec.strategy.stdio[2] or result.output
 
