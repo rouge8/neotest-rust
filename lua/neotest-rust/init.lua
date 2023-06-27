@@ -408,6 +408,7 @@ function adapter.results(spec, result, tree)
         results[spec.context.position_id] = {
             status = "failed",
             output = output,
+            errors = { { message = "test error message" } },
         }
     end
 
