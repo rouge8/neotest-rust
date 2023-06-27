@@ -338,6 +338,21 @@ function adapter.build_spec(args)
     }
 end
 
+---@param output string
+---@return neotest.Error[]
+function adapter.parse_errors(output)
+    -- Parses the following message into a error that contains the line number and the message:
+    -- thread 'tests::failed_math' panicked at 'assertion failed: `(left == right)`
+    --  left: `2`,
+    --
+    -- right: `3`', src/main.rs:16:9
+    local message, line = output:match("thread '[^']+' panicked at '([^']+)', [^:]+:(%d+):%d+")
+
+    return {
+        { line = tonumber(line), message = message },
+    }
+end
+
 ---@async
 ---@param spec neotest.RunSpec
 ---@param result neotest.StrategyResult
@@ -371,9 +386,12 @@ function adapter.results(spec, result, tree)
             end
             for _, testcase in pairs(testcases) do
                 if testcase.failure then
+                    local output = testcase.failure[1]
+
                     results[testcase._attr.name] = {
                         status = "failed",
-                        short = testcase.failure[1],
+                        short = output,
+                        errors = adapter.parse_errors(output),
                     }
                 else
                     results[testcase._attr.name] = {
@@ -385,9 +403,11 @@ function adapter.results(spec, result, tree)
     elseif spec.context.strategy == "dap" and util.file_exists(output_path) then
         results = dap.translate_results(output_path)
     else
+        local output = result.output
+
         results[spec.context.position_id] = {
             status = "failed",
-            output = result.output,
+            output = output,
         }
     end
 
