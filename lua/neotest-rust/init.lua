@@ -2,6 +2,7 @@ local async = require("neotest.async")
 local context_manager = require("plenary.context_manager")
 local dap = require("neotest-rust.dap")
 local util = require("neotest-rust.util")
+local errors = require("neotest-rust.errors")
 local Job = require("plenary.job")
 local open = context_manager.open
 local Path = require("plenary.path")
@@ -338,21 +339,6 @@ function adapter.build_spec(args)
     }
 end
 
----@param output string
----@return neotest.Error[]
-function adapter.parse_errors(output)
-    -- Parses the following message into a error that contains the line number and the message:
-    -- thread 'tests::failed_math' panicked at 'assertion failed: `(left == right)`
-    --  left: `2`,
-    --
-    -- right: `3`', src/main.rs:16:9
-    local message, line = output:match("thread '[^']+' panicked at '([^']+)', [^:]+:(%d+):%d+")
-
-    return {
-        { line = tonumber(line), message = message },
-    }
-end
-
 ---@async
 ---@param spec neotest.RunSpec
 ---@param result neotest.StrategyResult
@@ -391,7 +377,7 @@ function adapter.results(spec, result, tree)
                     results[testcase._attr.name] = {
                         status = "failed",
                         short = output,
-                        errors = adapter.parse_errors(output),
+                        errors = errors.parse_errors(output),
                     }
                 else
                     results[testcase._attr.name] = {
@@ -408,7 +394,6 @@ function adapter.results(spec, result, tree)
         results[spec.context.position_id] = {
             status = "failed",
             output = output,
-            errors = { { message = "test error message" } },
         }
     end
 

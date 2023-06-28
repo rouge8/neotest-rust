@@ -971,7 +971,7 @@ describe("results", function()
                 status = "failed",
                 errors = {
                     {
-                        line = 10,
+                        line = 9,
                         message = "assertion failed: false",
                     },
                 },
@@ -996,7 +996,7 @@ describe("results", function()
             ["foo::tests::should_fail"] = {
                 short = "thread 'foo::tests::should_fail' panicked at 'assertion failed: false', src/foo.rs:10:9\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
                 status = "failed",
-                errors = { { line = 10, message = "assertion failed: false" } },
+                errors = { { line = 9, message = "assertion failed: false" } },
             },
             ["foo::tests::should_pass"] = {
                 status = "passed",
@@ -1004,7 +1004,7 @@ describe("results", function()
             should_fail = {
                 short = "thread 'should_fail' panicked at 'assertion failed: false', tests/tests.rs:8:5\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
                 status = "failed",
-                errors = { { line = 8, message = "assertion failed: false" } },
+                errors = { { line = 7, message = "assertion failed: false" } },
             },
             should_pass = {
                 status = "passed",
@@ -1083,28 +1083,5 @@ describe("results", function()
         }
 
         assert.are.same(expected, results)
-    end)
-
-    describe("parses errors from output", function()
-        it("assert_eq", function()
-            local adapter = require("neotest-rust")({})
-            local output = "test tests::failed_math ... FAILED\n"
-                .. "failures:\n\n"
-                .. "---- tests::failed_math stdout ----\n"
-                .. "thread 'tests::failed_math' panicked at 'assertion failed: `(left == right)`\n"
-                .. "  left: `2`,\n"
-                .. " right: `3`', src/main.rs:16:9\n"
-                .. "note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace"
-
-            local results = adapter.parse_errors(output)
-            local expected = {
-                {
-                    line = 16,
-                    message = "assertion failed: `(left == right)`\n  left: `2`,\n right: `3`",
-                },
-            }
-
-            assert.are.same(expected, results)
-        end)
     end)
 end)
