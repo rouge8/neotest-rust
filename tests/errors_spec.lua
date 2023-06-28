@@ -1,6 +1,13 @@
 local errors = require("neotest-rust.errors")
 
 describe("parses errors from output", function()
+    it("non-parsable errors in output", function()
+        local output = "something\nwent\nwrong"
+        local results = errors.parse_errors(output)
+
+        assert.is_true(#results == 0)
+    end)
+
     it("assert_eq", function()
         local output = "test tests::failed_math ... FAILED\n"
             .. "failures:\n\n"
