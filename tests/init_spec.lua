@@ -969,6 +969,12 @@ describe("results", function()
             ["foo::tests::should_fail"] = {
                 short = "thread 'foo::tests::should_fail' panicked at 'assertion failed: false', src/foo.rs:10:9\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
                 status = "failed",
+                errors = {
+                    {
+                        line = 9,
+                        message = "assertion failed: false",
+                    },
+                },
             },
             ["foo::tests::should_pass"] = {
                 status = "passed",
@@ -990,6 +996,7 @@ describe("results", function()
             ["foo::tests::should_fail"] = {
                 short = "thread 'foo::tests::should_fail' panicked at 'assertion failed: false', src/foo.rs:10:9\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
                 status = "failed",
+                errors = { { line = 9, message = "assertion failed: false" } },
             },
             ["foo::tests::should_pass"] = {
                 status = "passed",
@@ -997,6 +1004,7 @@ describe("results", function()
             should_fail = {
                 short = "thread 'should_fail' panicked at 'assertion failed: false', tests/tests.rs:8:5\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
                 status = "failed",
+                errors = { { line = 7, message = "assertion failed: false" } },
             },
             should_pass = {
                 status = "passed",

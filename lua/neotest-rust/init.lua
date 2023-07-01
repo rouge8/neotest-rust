@@ -2,6 +2,7 @@ local async = require("neotest.async")
 local context_manager = require("plenary.context_manager")
 local dap = require("neotest-rust.dap")
 local util = require("neotest-rust.util")
+local errors = require("neotest-rust.errors")
 local Job = require("plenary.job")
 local open = context_manager.open
 local Path = require("plenary.path")
@@ -371,9 +372,12 @@ function adapter.results(spec, result, tree)
             end
             for _, testcase in pairs(testcases) do
                 if testcase.failure then
+                    local output = testcase.failure[1]
+
                     results[testcase._attr.name] = {
                         status = "failed",
-                        short = testcase.failure[1],
+                        short = output,
+                        errors = errors.parse_errors(output),
                     }
                 else
                     results[testcase._attr.name] = {
@@ -385,9 +389,11 @@ function adapter.results(spec, result, tree)
     elseif spec.context.strategy == "dap" and util.file_exists(output_path) then
         results = dap.translate_results(output_path)
     else
+        local output = result.output
+
         results[spec.context.position_id] = {
             status = "failed",
-            output = result.output,
+            output = output,
         }
     end
 
