@@ -1002,7 +1002,6 @@ describe("results", function()
         assert.are.same(expected, results)
     end)
 
-
     it("parses results with a multiple test suites in it", function()
         local adapter = require("neotest-rust")({})
         local path = vim.loop.cwd() .. "/tests/data/simple-package/multiple_test_suites.xml"

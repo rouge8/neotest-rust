@@ -4,7 +4,6 @@ local M = {}
 ---@param output string
 ---@return neotest.Error[]
 function M.parse_errors(output)
-
     if output == nil then
         return {}
     end
