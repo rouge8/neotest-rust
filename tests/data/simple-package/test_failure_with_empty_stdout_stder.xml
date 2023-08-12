@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="nextest-run" tests="1" failures="1" errors="0" uuid="17fb0f4a-f4d2-40b2-b229-ba30aac4b211" timestamp="2022-12-16T12:05:54.600+00:00" time="0.002">
+    <testsuite name="tmp::bin/tmp" tests="1" disabled="0" errors="0" failures="1">
+        <testcase name="foo::tests::should_not_crash" classname="tmp::bin/tmp" timestamp="2022-12-16T12:05:54.600+00:00" time="0.002">
+            <failure type="test failure"></failure>
+            <system-out></system-out>
+            <system-err></system-err>
+        </testcase>
+    </testsuite>
+</testsuites>

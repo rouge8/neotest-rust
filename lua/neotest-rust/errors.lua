@@ -4,6 +4,11 @@ local M = {}
 ---@param output string
 ---@return neotest.Error[]
 function M.parse_errors(output)
+
+    if output == nil then
+        return {}
+    end
+
     local message, line = output:match("thread '[^']+' panicked at '([^']+)', [^:]+:(%d+):%d+")
 
     -- If we can't parse the output, return an empty table
