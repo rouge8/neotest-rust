@@ -984,6 +984,24 @@ describe("results", function()
         assert.are.same(expected, results)
     end)
 
+    it("parses results with empty system-out and system-err", function()
+        local adapter = require("neotest-rust")({})
+        local path = vim.loop.cwd() .. "/tests/data/simple-package/test_failure_with_empty_stdout_stder.xml"
+        local spec = { context = { junit_path = path }, strategy = { stdio = nil } }
+        local strategy_result = { code = 101, output = "/some/path" }
+
+        local results = adapter.results(spec, strategy_result, nil)
+
+        local expected = {
+            ["foo::tests::should_not_crash"] = {
+                status = "failed",
+                errors = {},
+            },
+        }
+
+        assert.are.same(expected, results)
+    end)
+
     it("parses results with a multiple test suites in it", function()
         local adapter = require("neotest-rust")({})
         local path = vim.loop.cwd() .. "/tests/data/simple-package/multiple_test_suites.xml"
