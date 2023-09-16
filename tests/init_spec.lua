@@ -573,7 +573,7 @@ describe("build_spec", function()
 
             local spec = adapter.build_spec({ tree = tree })
             assert.matches(
-                "cargo nextest run %-%-no%-fail%-fast %-%-config%-file %g+ %-%-profile neotest %-%-no%-capture %-%-test%-threads 3 %-%-test test_it ",
+                "cargo nextest run %-%-workspace %-%-no%-fail%-fast %-%-config%-file %g+ %-%-profile neotest %-%-no%-capture %-%-test%-threads 3 %-%-test test_it ",
                 spec.command
             )
         end)

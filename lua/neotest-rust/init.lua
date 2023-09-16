@@ -228,6 +228,7 @@ function adapter.build_spec(args)
         "cargo",
         "nextest",
         "run",
+        "--workspace",
         "--no-fail-fast",
         "--config-file",
         tmp_nextest_config,
