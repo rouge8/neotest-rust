@@ -258,6 +258,8 @@ function adapter.build_spec(args)
 
     local position_id
     local test_filter
+    -- NOTE In the test_filter the part after -E is inside " and not ' to allow it to work on both windows and linux
+    -- https://github.com/rouge8/neotest-rust/issues/50
     if position.type == "test" then
         position_id = position.id
         -- TODO: Support rstest parametrized tests
