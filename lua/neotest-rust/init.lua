@@ -258,15 +258,17 @@ function adapter.build_spec(args)
 
     local position_id
     local test_filter
+    -- NOTE In the test_filter the part after -E is inside " and not ' to allow it to work on both windows and linux
+    -- https://github.com/rouge8/neotest-rust/issues/50
     if position.type == "test" then
         position_id = position.id
         -- TODO: Support rstest parametrized tests
-        test_filter = "-E '" .. package_filter .. "test(/^" .. position_id .. "$/)'"
+        test_filter = '-E "' .. package_filter .. "test(/^" .. position_id .. '$/)"'
     elseif position.type == "file" then
         if package_name then
             -- A basic filter to run tests within the package that will be
             -- overridden later if 'position_id' is not nil
-            test_filter = "-E 'package(" .. package_name .. ")'"
+            test_filter = '-E "package(' .. package_name .. ')"'
         end
 
         position_id = path_to_test_path(position.path)
@@ -278,7 +280,7 @@ function adapter.build_spec(args)
 
         if position_id then
             -- Either a unit test or an integration test in a subdirectory
-            test_filter = "-E '" .. package_filter .. "test(/^" .. position_id .. "::/)'"
+            test_filter = '-E "' .. package_filter .. "test(/^" .. position_id .. '::/)"'
         end
     end
     table.insert(command, test_filter)
