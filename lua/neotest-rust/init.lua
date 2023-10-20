@@ -160,50 +160,148 @@ local function binary_name(path)
     return vim.split(path, "/")[1]
 end
 
+local function get_match_type(captured_nodes)
+    if captured_nodes["test.name"] then
+        return "test"
+    end
+    if captured_nodes["namespace.name"] then
+        return "namespace"
+    end
+end
+
+local function find_parent(nodes, name)
+    for _, value in nodes:iter_nodes() do
+        local data = value:data()
+        if data.name == name then
+            return value
+        end
+    end
+    return nil
+end
+
+-- See https://github.com/frondeus/test-case/blob/master/crates/test-case-core/src/utils.rs#L4
+local function escape_testcase_name(name)
+    name = name:gsub('"', "") -- remove any surrounding dquotes from string literal
+    if name == nil or name == "" then
+        return "_empty"
+    end
+    name = string.lower(name) -- make all letters lowercase
+    local ident = {}
+    local last_under = false
+    for c in name:gmatch(".") do
+        if c:match("%w") then
+            -- alphanumeric character
+            last_under = false
+            table.insert(ident, c)
+        elseif not last_under then
+            -- non alphanumeric char not yet prefixed with underscore
+            last_under = true
+            table.insert(ident, "_")
+        end
+    end
+    if ident[1] ~= "_" and not ident[1]:match("%a") then
+        table.insert(ident, 1, "_")
+    end
+    name = table.concat(ident, "")
+    return name
+end
+
+-- let mut acc = String::new();
+--                 for arg in &self.args {
+--                     acc.push_str(&fmt_syn(&arg));
+--                     acc.push('_');
+--                 }
+--                 acc.push_str("expects");
+--                 if let Some(expression) = &self.expression {
+--                     acc.push(' ');
+--                     acc.push_str(&expression.to_string())
+--                 }
+--                 acc
+
+-- Enrich `it.each` tests with metadata about TS node position
 ---Given a file path, parse all the tests within it.
 ---@async
 ---@param path string Absolute file path
 ---@return neotest.Tree | nil
 function adapter.discover_positions(path)
     local query = [[;; query
+
+;; Matches mod <namespace.name> {}
+((mod_item name: (identifier) @namespace.name) @namespace.definition)
+
+;; Matches `#[test]`
 (
-  (attribute_item
-    [
-      (attribute
-        (identifier) @macro_name
-      )
-      (attribute
-        [
-	  (identifier) @macro_name
-	  (scoped_identifier
-	    name: (identifier) @macro_name
-          )
-        ]
-      )
-    ]
-  )
-  [
-  (attribute_item
-    (attribute
-      (identifier)
+  (attribute_item 
+    (attribute (identifier) @macro
+      (#eq? @macro "test")
     )
   )
-  (line_comment)
-  ]*
+  (function_item name: (identifier) @test.name) @test.definition
+) 
+
+;; Matches `#[test_case(...)] fn <test.name>()`
+(
+  (attribute_item
+    (attribute (identifier) @macro) (#eq? @macro "test_case")
+  ) @parameterized
+  .
+  (line_comment)*
+  .
+  (function_item name: (identifier) @test.name) @test.definition
+)
+
+;; Matches `#[test_case(...)] #[{tokio,async_std}::test] async fn <test.name>()`
+(
+  (attribute_item
+    (attribute (identifier) @macro) (#eq? @macro "test_case")
+  ) @parameterized
+  .
+  (line_comment)*
+  .
+  (attribute_item
+    (attribute
+      (scoped_identifier
+        path: (identifier) @package
+        name: (identifier)
+      )
+    )
+    ;; all packages which provide a #[<package>::test] macro
+    (#any-of? @package "tokio" "async_std")
+  )
+  .
+  (line_comment)*
   .
   (function_item
+    (function_modifiers) @modifier
     name: (identifier) @test.name
   ) @test.definition
-  (#any-of? @macro_name "test" "rstest" "case")
-
+  (#eq? @modifier "async")
 )
-(mod_item name: (identifier) @namespace.name)? @namespace.definition
     ]]
+    local positions = lib.treesitter.parse_positions(path, query, {
+        require_namespaces = true,
+        nested_tests = true,
+        build_position = function(file_path, source, captured_nodes)
+            local match_type = get_match_type(captured_nodes)
+            if not match_type then
+                return
+            end
 
-    return lib.treesitter.parse_positions(path, query, {
-        require_namespaces = false,
+            local name = vim.treesitter.get_node_text(captured_nodes[match_type .. ".name"], source)
+            local definition = captured_nodes[match_type .. ".definition"]
+            local range = { definition:range() }
+            local is_parameterized = captured_nodes["parameterized"] and true or false
+
+            return {
+                type = match_type,
+                path = file_path,
+                name = name,
+                range = range,
+                is_parameterized = is_parameterized,
+            }
+        end,
         position_id = function(position, namespaces)
-            return table.concat(
+            local id = table.concat(
                 vim.tbl_flatten({
                     path_to_test_path(path),
                     vim.tbl_map(function(pos)
@@ -213,8 +311,54 @@ function adapter.discover_positions(path)
                 }),
                 "::"
             )
+            return id
         end,
     })
+    local content = lib.files.read(path)
+    local root, lang = lib.treesitter.get_parse_root(path, content, { fast = true })
+    for _, value in positions:iter_nodes() do
+        local data = value:data()
+        if data.is_parameterized then
+            local query = [[
+;; Matches `#[test_case(... ; "<test.name>")]*fn <parent>()`
+(
+  (attribute_item
+    (attribute (identifier) @macro arguments: (token_tree (string_literal) @test.name)) (#eq? @macro "test_case")
+  ) @test.definition
+  .
+  [
+    (line_comment)
+    (attribute_item)
+  ]*
+  .
+  (function_item name: (identifier) @parent) (#eq? @parent "]] .. data.name .. [[")
+)
+]]
+            local q = lib.treesitter.normalise_query(lang, query)
+            for _, match in q:iter_matches(root, content) do
+                local captured_nodes = {}
+                for i, capture in ipairs(q.captures) do
+                    captured_nodes[capture] = match[i]
+                end
+                if captured_nodes["test.name"] and captured_nodes["test.definition"] then
+                    local name = vim.treesitter.get_node_text(captured_nodes["test.name"], content)
+                    local definition = captured_nodes["test.definition"]
+                    name = escape_testcase_name(name)
+
+                    local new_data = {
+                        type = "test",
+                        id = data.id .. "::" .. name,
+                        name = name,
+                        range = { definition:range() },
+                        path = path,
+                    }
+                    local new_pos = value:new(new_data, {}, value._key, {}, {})
+                    value:add_child(new_data.id, new_pos)
+                end
+            end
+        end
+    end
+    return positions
 end
 
 ---@param args neotest.RunArgs
@@ -271,7 +415,7 @@ function adapter.build_spec(args)
     if position.type == "test" then
         position_id = position.id
         -- TODO: Support rstest parametrized tests
-        test_filter = "-E " .. vim.fn.shellescape(package_filter .. "test(/^" .. position_id .. "$/)")
+        test_filter = "-E " .. vim.fn.shellescape(package_filter .. "test(/^" .. position_id .. "/)")
     elseif position.type == "file" then
         if package_name then
             -- A basic filter to run tests within the package that will be
@@ -367,6 +511,11 @@ function adapter.results(spec, result, tree)
         end)
 
         local root = xml.parse(data)
+
+        if root.testsuites.testsuite == nil then
+            lib.notify("Test didn't produce any output")
+            return results
+        end
 
         local testsuites
         if root.testsuites.testsuite == nil then
