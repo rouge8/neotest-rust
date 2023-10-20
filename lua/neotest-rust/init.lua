@@ -169,16 +169,6 @@ local function get_match_type(captured_nodes)
     end
 end
 
-local function find_parent(nodes, name)
-    for _, value in nodes:iter_nodes() do
-        local data = value:data()
-        if data.name == name then
-            return value
-        end
-    end
-    return nil
-end
-
 -- See https://github.com/frondeus/test-case/blob/master/crates/test-case-core/src/utils.rs#L4
 local function escape_testcase_name(name)
     name = name:gsub('"', "") -- remove any surrounding dquotes from string literal
@@ -205,18 +195,6 @@ local function escape_testcase_name(name)
     name = table.concat(ident, "")
     return name
 end
-
--- let mut acc = String::new();
---                 for arg in &self.args {
---                     acc.push_str(&fmt_syn(&arg));
---                     acc.push('_');
---                 }
---                 acc.push_str("expects");
---                 if let Some(expression) = &self.expression {
---                     acc.push(' ');
---                     acc.push_str(&expression.to_string())
---                 }
---                 acc
 
 -- Enrich `it.each` tests with metadata about TS node position
 ---Given a file path, parse all the tests within it.
@@ -277,6 +255,22 @@ function adapter.discover_positions(path)
   ) @test.definition
   (#eq? @modifier "async")
 )
+
+;; Matches `#[rstest] fn <test.name>(#[case] ...)`
+(
+  (attribute_item (attribute (identifier) @macro) (#eq? @macro "rstest"))
+  .
+  [
+    (line_comment)
+    (attribute_item)
+  ]*
+  .
+  (function_item 
+    name: (identifier) @test.name
+    parameters: (parameters (attribute_item (attribute (identifier) @parameterized)))
+    (#eq? @parameterized "case")
+  ) @test.definition
+)
     ]]
     local positions = lib.treesitter.parse_positions(path, query, {
         require_namespaces = true,
@@ -320,11 +314,13 @@ function adapter.discover_positions(path)
         local data = value:data()
         if data.is_parameterized then
             local query = [[
-;; Matches `#[test_case(... ; "<test.name>")]*fn <parent>()`
+;; Matches `#[test_case(... ; "<test.name>")]*fn <parent>()`   (test_case)
+;; ...  or `#[case(...)]*fn <parent>()`                        (rstest)
 (
-  (attribute_item
-    (attribute (identifier) @macro arguments: (token_tree (string_literal) @test.name)) (#eq? @macro "test_case")
-  ) @test.definition
+  (attribute_item 
+    (attribute (identifier) @macro (#any-of? @macro "test_case" "case")
+    arguments: (token_tree ((_) (string_literal)? @test.name . ))
+  )) @test.definition
   .
   [
     (line_comment)
@@ -335,15 +331,20 @@ function adapter.discover_positions(path)
 )
 ]]
             local q = lib.treesitter.normalise_query(lang, query)
+            local case_index = 1
             for _, match in q:iter_matches(root, content) do
                 local captured_nodes = {}
                 for i, capture in ipairs(q.captures) do
                     captured_nodes[capture] = match[i]
                 end
-                if captured_nodes["test.name"] and captured_nodes["test.definition"] then
-                    local name = vim.treesitter.get_node_text(captured_nodes["test.name"], content)
+                if captured_nodes["test.definition"] then
+                    local name = "case_" .. tostring(case_index)
+                    case_index = case_index + 1
+                    if captured_nodes["test.name"] ~= nil then
+                        name = vim.treesitter.get_node_text(captured_nodes["test.name"], content)
+                        name = escape_testcase_name(name)
+                    end
                     local definition = captured_nodes["test.definition"]
-                    name = escape_testcase_name(name)
 
                     local new_data = {
                         type = "test",
