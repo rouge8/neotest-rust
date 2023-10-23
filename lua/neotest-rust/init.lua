@@ -1,7 +1,9 @@
 local async = require("neotest.async")
+local logger = require("neotest.logging")
 local context_manager = require("plenary.context_manager")
 local dap = require("neotest-rust.dap")
 local util = require("neotest-rust.util")
+local discovery = require("neotest-rust.discovery")
 local errors = require("neotest-rust.errors")
 local Job = require("plenary.job")
 local open = context_manager.open
@@ -63,6 +65,8 @@ end
 local get_dap_adapter = function()
     return "codelldb"
 end
+
+local param_discovery
 
 local is_callable = function(obj)
     return type(obj) == "function" or (type(obj) == "table" and obj.__call)
@@ -169,41 +173,8 @@ local function get_match_type(captured_nodes)
     end
 end
 
--- See https://github.com/frondeus/test-case/blob/master/crates/test-case-core/src/utils.rs#L4
-local function escape_testcase_name(name)
-    name = name:gsub('"', "") -- remove any surrounding dquotes from string literal
-    if name == nil or name == "" then
-        return "_empty"
-    end
-    name = string.lower(name) -- make all letters lowercase
-    local ident = {}
-    local last_under = false
-    for c in name:gmatch(".") do
-        if c:match("%w") then
-            -- alphanumeric character
-            last_under = false
-            table.insert(ident, c)
-        elseif not last_under then
-            -- non alphanumeric char not yet prefixed with underscore
-            last_under = true
-            table.insert(ident, "_")
-        end
-    end
-    if ident[1] ~= "_" and not ident[1]:match("%a") then
-        table.insert(ident, 1, "_")
-    end
-    name = table.concat(ident, "")
-    return name
-end
-
--- Enrich `it.each` tests with metadata about TS node position
----Given a file path, parse all the tests within it.
----@async
----@param path string Absolute file path
----@return neotest.Tree | nil
-function adapter.discover_positions(path)
-    local query = [[;; query
-
+-- Tree Sitter query to discover test structure in document
+local query = [[
 ;; Matches mod <namespace.name> {}
 ((mod_item name: (identifier) @namespace.name) @namespace.definition)
 
@@ -271,31 +242,45 @@ function adapter.discover_positions(path)
     (#eq? @parameterized "case")
   ) @test.definition
 )
-    ]]
+]]
+
+-- Given a `file_path` with its content as `source` and the `nodes` captured by tree-sitter
+-- build position object containing:
+---@param file_path string
+---@param source string
+---@param nodes
+---@return table<string, neotest.Result>|nil
+---
+-- * `type`: Either `namespace` or `test`, depending if the ts query captured `test.name` or `namespace.name`
+-- * `path`: same as `file_path`
+-- * `name`: text of `<type>.name` capture
+-- * `range`: start and end position (row, col) of the test or namespace according to the `<type>.definition` capture
+-- * `is_parameterized`: true if the test seems parameterized (e.g. has a #[test_case(...)] or #[rstest::case] in front of it (heueristic)
+function adapter.build_position(file_path, source, nodes)
+    local type = get_match_type(nodes)
+    if not type then
+        return
+    end
+    return {
+        type = type,
+        path = file_path,
+        name = vim.treesitter.get_node_text(nodes[type .. ".name"], source),
+        range = { nodes[type .. ".definition"]:range() },
+        is_parameterized = nodes["parameterized"] and true or false,
+    }
+end
+
+---Given a file path, parse all the tests within it.
+---@async
+---@param path string Absolute file path
+---@return neotest.Tree | nil
+function adapter.discover_positions(path)
     local positions = lib.treesitter.parse_positions(path, query, {
         require_namespaces = true,
         nested_tests = true,
-        build_position = function(file_path, source, captured_nodes)
-            local match_type = get_match_type(captured_nodes)
-            if not match_type then
-                return
-            end
-
-            local name = vim.treesitter.get_node_text(captured_nodes[match_type .. ".name"], source)
-            local definition = captured_nodes[match_type .. ".definition"]
-            local range = { definition:range() }
-            local is_parameterized = captured_nodes["parameterized"] and true or false
-
-            return {
-                type = match_type,
-                path = file_path,
-                name = name,
-                range = range,
-                is_parameterized = is_parameterized,
-            }
-        end,
+        build_position = 'require("neotest-rust").build_position',
         position_id = function(position, namespaces)
-            local id = table.concat(
+            return table.concat(
                 vim.tbl_flatten({
                     path_to_test_path(path),
                     vim.tbl_map(function(pos)
@@ -305,60 +290,15 @@ function adapter.discover_positions(path)
                 }),
                 "::"
             )
-            return id
         end,
     })
-    local content = lib.files.read(path)
-    local root, lang = lib.treesitter.get_parse_root(path, content, { fast = true })
-    for _, value in positions:iter_nodes() do
-        local data = value:data()
-        if data.is_parameterized then
-            local query = [[
-;; Matches `#[test_case(... ; "<test.name>")]*fn <parent>()`   (test_case)
-;; ...  or `#[case(...)]*fn <parent>()`                        (rstest)
-(
-  (attribute_item 
-    (attribute (identifier) @macro (#any-of? @macro "test_case" "case")
-    arguments: (token_tree ((_) (string_literal)? @test.name . ))
-  )) @test.definition
-  .
-  [
-    (line_comment)
-    (attribute_item)
-  ]*
-  .
-  (function_item name: (identifier) @parent) (#eq? @parent "]] .. data.name .. [[")
-)
-]]
-            local q = lib.treesitter.normalise_query(lang, query)
-            local case_index = 1
-            for _, match in q:iter_matches(root, content) do
-                local captured_nodes = {}
-                for i, capture in ipairs(q.captures) do
-                    captured_nodes[capture] = match[i]
-                end
-                if captured_nodes["test.definition"] then
-                    local name = "case_" .. tostring(case_index)
-                    case_index = case_index + 1
-                    if captured_nodes["test.name"] ~= nil then
-                        name = vim.treesitter.get_node_text(captured_nodes["test.name"], content)
-                        name = escape_testcase_name(name)
-                    end
-                    local definition = captured_nodes["test.definition"]
 
-                    local new_data = {
-                        type = "test",
-                        id = data.id .. "::" .. name,
-                        name = name,
-                        range = { definition:range() },
-                        path = path,
-                    }
-                    local new_pos = value:new(new_data, {}, value._key, {}, {})
-                    value:add_child(new_data.id, new_pos)
-                end
-            end
-        end
+    if param_discovery == "treesitter" then
+        positions = discovery.treesitter(path, positions)
+    elseif param_discovery ~= "none" then
+        logger.warn("Unsupported value `" .. param_discovery .. "` for parameterized_test_discovery. Assuming `none`")
     end
+
     return positions
 end
 
@@ -579,6 +519,7 @@ setmetatable(adapter, {
                 return opts.dap_adapter
             end
         end
+        param_discovery = opts.parameterized_test_discovery or "none"
         return adapter
     end,
 })
