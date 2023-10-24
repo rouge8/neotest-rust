@@ -190,9 +190,7 @@ local query = [[
 
 ;; Matches `#[test_case(...)] fn <test.name>()`
 (
-  (attribute_item
-    (attribute (identifier) @macro) (#eq? @macro "test_case")
-  ) @parameterized
+  (attribute_item (attribute (identifier) @parameterization) (#eq? @parameterization "test_case"))
   .
   (line_comment)*
   .
@@ -203,7 +201,7 @@ local query = [[
 (
   (attribute_item
     (attribute (identifier) @macro) (#eq? @macro "test_case")
-  ) @parameterized
+  ) @parameterization
   .
   (line_comment)*
   .
@@ -238,8 +236,8 @@ local query = [[
   .
   (function_item 
     name: (identifier) @test.name
-    parameters: (parameters (attribute_item (attribute (identifier) @parameterized)))
-    (#eq? @parameterized "case")
+    parameters: (parameters . (attribute_item (attribute (identifier) @parameterization )))
+    (#any-of? @parameterization "case" "values" "files")
   ) @test.definition
 )
 ]]
@@ -255,18 +253,21 @@ local query = [[
 -- * `path`: same as `file_path`
 -- * `name`: text of `<type>.name` capture
 -- * `range`: start and end position (row, col) of the test or namespace according to the `<type>.definition` capture
--- * `is_parameterized`: true if the test seems parameterized (e.g. has a #[test_case(...)] or #[rstest::case] in front of it (heueristic)
+-- * `parameterization`: contains the macro name (e.g. `case`, `test_case`, `values` ... ) if the test is parameterized
+--                      (e.g. has a #[test_case(...)] or #[rstest::case] in front of it (heueristic) or nil if unparameterized
 function adapter.build_position(file_path, source, nodes)
     local type = get_match_type(nodes)
     if not type then
         return
     end
+
     return {
         type = type,
         path = file_path,
         name = vim.treesitter.get_node_text(nodes[type .. ".name"], source),
         range = { nodes[type .. ".definition"]:range() },
-        is_parameterized = nodes["parameterized"] and true or false,
+        parameterization = nodes["parameterization"]
+            and vim.treesitter.get_node_text(nodes["parameterization"], source),
     }
 end
 
@@ -295,6 +296,8 @@ function adapter.discover_positions(path)
 
     if param_discovery == "treesitter" then
         positions = discovery.treesitter(path, positions)
+    elseif param_discovery == "cargo" then
+        positions = discovery.cargo(path, positions, resolve_case_name)
     elseif param_discovery ~= "none" then
         logger.warn("Unsupported value `" .. param_discovery .. "` for parameterized_test_discovery. Assuming `none`")
     end
@@ -520,6 +523,7 @@ setmetatable(adapter, {
             end
         end
         param_discovery = opts.parameterized_test_discovery or "none"
+        resolve_case_name = opts.resolve_case_name
         return adapter
     end,
 })

@@ -34,9 +34,9 @@ mod tests {
         assert!(x < 10)
     }
 
-    // Not supported right now. Too complex for a plain tree sitter query =(
-    // #[rstest]
-    // fn fifth(#[values("aaa", "bbb", "ccc")] _name: &str, #[values(1, 2)] _foo: u32) {
-    //     assert!(true)
-    // }
+    // Only supported by `parameterized_test_discovery="cargo"` mode right now. Too complex for a plain tree sitter =(
+    #[rstest]
+    fn fifth(#[values("a", "bb", "ccc")] word: &str, #[values(1, 2, 3)] has_chars: usize) {
+        assert_eq!(word.chars().count(), has_chars)
+    }
 }
