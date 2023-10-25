@@ -11,11 +11,24 @@ local function build_query(test)
     return [[
 ;; Matches `#[test_case(... ; "<test.name>")]*fn <parent>()`   (test_case)
 ;; ...  or `#[case(...)]*fn <parent>()`                        (rstest)
+;; ...  or `#[case::<test.name>]*fn <parent>()`                (rstest)
 (
-  (attribute_item 
-    (attribute (identifier) @macro (#any-of? @macro "test_case" "case")
-    arguments: (token_tree ((_) (string_literal)? @test.name . ))
-  )) @test.definition
+  [
+    (attribute_item
+      (attribute
+        (identifier) @macro (#any-of? @macro "test_case" "case")
+        arguments: (token_tree ((_) (string_literal)? @test.name . ))
+      )
+    )
+    (attribute_item
+      (attribute
+        (scoped_identifier
+           path: (identifier) @macro
+           name: (identifier) @test.name
+        ) (#eq? @macro "case")
+      )
+    )
+  ] @test.definition
   .
   [
     (line_comment)
@@ -76,13 +89,24 @@ function M.treesitter(path, positions)
                 if captured_nodes["test.definition"] then
                     local id = "case_" .. tostring(case_index)
                     local name = id
+                    local macro = vim.treesitter.get_node_text(captured_nodes["macro"], content)
                     case_index = case_index + 1
 
                     if captured_nodes["test.name"] ~= nil then
                         name = vim.treesitter.get_node_text(captured_nodes["test.name"], content)
-                        name = name:gsub('"', "") -- remove any surrounding dquotes from string literal
-                        id = escape_testcase_name(name)
+                        if macro == "test_case" then
+                            -- #[test_case(arg1, arg2, ... ; "foo bar")] -> test.name = "foo bar"
+                            name = name:gsub('"', "") -- remove any surrounding dquotes from string literal
+                            id = escape_testcase_name(name)
+                        end
+                        if macro == "case" then
+                            -- #[case::foo_bar(arg1, arg2, ...)]  -> test.name = "foo_bar"
+                            local description = vim.treesitter.get_node_text(captured_nodes["test.name"], content)
+                            id = id .. "_" .. description
+                            name = description
+                        end
                     end
+
                     local definition = captured_nodes["test.definition"]
 
                     local new_data = {
@@ -202,6 +226,11 @@ end
 --- @param file Path the path to the file under test
 --- @return string any string which should be shown in the neotest summary panel for this case, or `nil` to not show this case
 M.resolve_case_name = function(id, macro, file)
+    if macro == "case" then
+        -- rstest with description, turn `case_3_foo_bar` -> `foo_bar`
+        id = id:gsub("^case_%d+_", "")
+        return id
+    end
     if macro == "values" then
         -- Turn `foo_3___blub__::bar_10_3` -> `foo[blub] bar[3]`
         return table.concat(
@@ -271,7 +300,7 @@ function M.cargo(path, positions, name_mapper)
         local data = value:data()
         if data.type == "test" and data.parameterization ~= nil then
             for _, case in pairs(tests[target]) do
-                if case:match("^" .. data.id) then
+                if case:match("^" .. data.id .. "::") then
                     -- `case` is a parameterized version of `value`, so add it as child
                     local name = name_mapper(case:gsub("^" .. data.id .. "::", ""), data.parameterization, path)
                     if name ~= nil then

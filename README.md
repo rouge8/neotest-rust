@@ -73,6 +73,7 @@ To discover parameterized tests `neotest-rust` offers two discovery strategies, 
 | `#[test_case(...)]` | ✓ | ✓ |
 | `#[test_case(...)]` with `async` | ✓ | ✓ |
 | `#[rstest]` with [parameters](https://docs.rs/rstest/latest/rstest/attr.rstest.html#use-specific-case-attributes) | ✓ | ✓ |
+| `#[rstest]` with [parameter descriptions](https://docs.rs/rstest/latest/rstest/attr.rstest.html#optional-case-description) | ✓ | ✓ |
 | `#[rstest]` with [values](https://docs.rs/rstest/latest/rstest/attr.rstest.html#values-lists) | ✗ | ✓ |
 | `#[rstest` with [files](https://docs.rs/rstest/latest/rstest/attr.rstest.html#files-path-as-input-arguments) | ✗ | ✓ |
 | [`rstest_reuse`](https://docs.rs/rstest/latest/rstest/attr.rstest.html#use-parametrize-definition-in-more-tests) | ✗ | ✗ |
