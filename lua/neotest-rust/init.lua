@@ -225,7 +225,8 @@ local query = [[
   (#eq? @modifier "async")
 )
 
-;; Matches `#[rstest] fn <test.name>(#[case] ...)`
+;; Matches `#[rstest] fn <test.name>(...)`
+;; ... or  `#[rstest] fn <test.name>(#[case/values/files] ...)`
 (
   (attribute_item (attribute (identifier) @macro) (#eq? @macro "rstest"))
   .
@@ -236,7 +237,7 @@ local query = [[
   .
   (function_item 
     name: (identifier) @test.name
-    parameters: (parameters . (attribute_item (attribute (identifier) @parameterization )))
+    parameters: (parameters . (attribute_item (attribute (identifier) @parameterization ))? )
     (#any-of? @parameterization "case" "values" "files")
   ) @test.definition
 )
@@ -261,13 +262,22 @@ function adapter.build_position(file_path, source, nodes)
         return
     end
 
+    local parameterization
+
+    if nodes["macro"] and vim.treesitter.get_node_text(nodes["macro"], source) == "rstest" then
+        -- Need this because rstest function can also contain injected fixture without any parameterization attribute
+        parameterization = "<injected>"
+    end
+    if nodes["parameterization"] then
+        parameterization = vim.treesitter.get_node_text(nodes["parameterization"], source)
+    end
+
     return {
         type = type,
         path = file_path,
         name = vim.treesitter.get_node_text(nodes[type .. ".name"], source),
         range = { nodes[type .. ".definition"]:range() },
-        parameterization = nodes["parameterization"]
-            and vim.treesitter.get_node_text(nodes["parameterization"], source),
+        parameterization = parameterization,
     }
 end
 

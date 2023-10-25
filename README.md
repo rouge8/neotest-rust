@@ -67,6 +67,7 @@ To discover parameterized tests `neotest-rust` offers two discovery strategies, 
 | use when | <ul><li>you want icons placed on each testcase directly</li><li>test case discovery to be faster</li><li>you don't want to wait to recompile your tests to discover changes</li></ul> | <ul><li>you are using `#[rstest::values(...)]`</li><li>you are using `#[rstest::files(...)]`</li><li>you are using `#[test_case(...)]` _without_ test comments</li><li>the `treesitter` mode doesn't detect your test(s)</li></ul> |
 | `#[rstest]` | ✓ | ✓ |
 | `#[rstest]` with `async` | ✓ | ✓ |
+| `#[rstest]` with [injected fixtures](https://docs.rs/rstest/latest/rstest/attr.rstest.html#injecting-fixtures) | ✓ | ✓ |
 | `#[test_case(...)]` | ✓ | ✓ |
 | `#[test_case(...)]` with `async` | ✓ | ✓ |
 | `#[rstest]` with [parameters](https://docs.rs/rstest/latest/rstest/attr.rstest.html#use-specific-case-attributes) | ✓ | ✓ |

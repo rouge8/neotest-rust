@@ -1,6 +1,15 @@
 #[cfg(test)]
 mod tests {
-    use rstest::rstest;
+    use rstest::{fixture, rstest};
+
+    #[fixture]
+    fn bar() -> i32 {
+        42
+    }
+    #[rstest]
+    fn fixture_injected(bar: i32) {
+        assert_eq!(42, bar)
+    }
 
     #[rstest]
     #[case(0)]

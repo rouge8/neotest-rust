@@ -227,6 +227,11 @@ M.resolve_case_name = function(id, macro, file)
             " "
         )
     end
+    if macro == "<injected>" then
+        -- Strip namespaces from test name `test::foo::bar` -> `bar`
+        local parts = vim.split(id, "::")
+        return parts[#parts]
+    end
 
     return id
 end
