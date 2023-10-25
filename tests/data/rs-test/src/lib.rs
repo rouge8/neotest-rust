@@ -1,6 +1,14 @@
 #[cfg(test)]
 mod tests {
     use rstest::*;
+    use std::time::Duration;
+
+    #[rstest]
+    #[timeout(Duration::from_millis(10))]
+    fn timeout() {
+        std::thread::sleep(Duration::from_millis(15));
+        assert!(true)
+    }
 
     #[fixture]
     fn bar() -> i32 {
@@ -94,6 +102,30 @@ mod tests {
     ) {
         let n = n.await;
         assert!(n % 2 == 0, "{n} not even");
+    }
+
+    #[rstest]
+    #[case::pass(Duration::from_millis(1))]
+    #[timeout(Duration::from_millis(10))]
+    #[case::fail(Duration::from_millis(25))]
+    #[timeout(Duration::from_millis(20))]
+    fn parameterized_timeout(#[case] sleepy: Duration) {
+        std::thread::sleep(sleepy);
+        assert!(true)
+    }
+
+    #[rstest]
+    #[case::pass(Duration::from_millis(1), 4)]
+    #[timeout(Duration::from_millis(10))]
+    #[case::fail_timeout(Duration::from_millis(60), 4)]
+    #[case::fail_value(Duration::from_millis(1), 5)]
+    #[timeout(Duration::from_millis(100))]
+    async fn parameterized_async_timeout(#[case] delay: Duration, #[case] expected: u32) {
+        async fn delayed_sum(a: u32, b: u32, delay: Duration) -> u32 {
+            async_std::task::sleep(delay).await;
+            a + b
+        }
+        assert_eq!(expected, delayed_sum(2, 2, delay).await);
     }
 
     // Only supported by `parameterized_test_discovery="cargo"` mode right now. Too complex for a plain tree sitter =(
