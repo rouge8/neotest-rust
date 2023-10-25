@@ -20,6 +20,16 @@ mod tests {
         assert_eq!(42, short)
     }
 
+    struct User(String, u8);
+    #[fixture]
+    fn user(#[default("Alice")] name: impl AsRef<str>, #[default(22)] age: u8) -> User {
+        User(name.as_ref().to_owned(), age)
+    }
+    #[rstest]
+    fn fixture_partial_injection(#[with("Bob")] user: User) {
+        assert_eq!("Bob", user.0)
+    }
+
     #[rstest]
     #[case(0)]
     #[case(1)]
@@ -54,7 +64,7 @@ mod tests {
 
     // Only supported by `parameterized_test_discovery="cargo"` mode right now. Too complex for a plain tree sitter =(
     #[rstest]
-    fn fifth(#[values("a", "bb", "ccc")] word: &str, #[values(1, 2, 3)] has_chars: usize) {
+    fn combinations(#[values("a", "bb", "ccc")] word: &str, #[values(1, 2, 3)] has_chars: usize) {
         assert_eq!(word.chars().count(), has_chars)
     }
 }

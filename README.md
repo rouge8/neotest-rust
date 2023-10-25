@@ -69,6 +69,7 @@ To discover parameterized tests `neotest-rust` offers two discovery strategies, 
 | `#[rstest]` with `async` | ✓ | ✓ |
 | `#[rstest]` with [injected fixtures](https://docs.rs/rstest/latest/rstest/attr.rstest.html#injecting-fixtures) | ✓ | ✓ |
 | `#[rstest]` with [rename fixtures](https://docs.rs/rstest/latest/rstest/attr.rstest.html#injecting-fixtures) | ✓ | ✓ |
+| `#[rstest]` with [partial injection](https://docs.rs/rstest/latest/rstest/attr.fixture.html#partial-injection) | ✓ | ✓ |
 | `#[test_case(...)]` | ✓ | ✓ |
 | `#[test_case(...)]` with `async` | ✓ | ✓ |
 | `#[rstest]` with [parameters](https://docs.rs/rstest/latest/rstest/attr.rstest.html#use-specific-case-attributes) | ✓ | ✓ |
