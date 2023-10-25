@@ -241,7 +241,7 @@ local query = [[
   (function_item 
     name: (identifier) @test.name
     parameters: (parameters . (attribute_item (attribute (identifier) @parameterization ))? )
-    (#any-of? @parameterization "from" "with" "case" "values" "files")
+    (#any-of? @parameterization "from" "with" "case" "values" "files" "future")
   ) @test.definition
 )
 ]]

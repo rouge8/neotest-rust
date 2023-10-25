@@ -30,6 +30,16 @@ mod tests {
         assert_eq!("Bob", user.0)
     }
 
+    #[fixture]
+    async fn magic() -> i32 {
+        42
+    }
+    #[rstest]
+    #[tokio::test]
+    async fn fixture_async(#[future] magic: i32) {
+        assert_eq!(magic.await, 42)
+    }
+
     #[rstest]
     #[case(0)]
     #[case(1)]
@@ -70,6 +80,20 @@ mod tests {
     #[async_std::test]
     async fn parameterized_async_std(#[case] x: u64) {
         assert!(x < 10)
+    }
+
+    #[rstest]
+    #[case::even(async { 2 })]
+    // random comment in between
+    #[case::odd(async { 3 })]
+    #[tokio::test]
+    async fn parameterized_async_parameter(
+        #[future]
+        #[case]
+        n: u32,
+    ) {
+        let n = n.await;
+        assert!(n % 2 == 0, "{n} not even");
     }
 
     // Only supported by `parameterized_test_discovery="cargo"` mode right now. Too complex for a plain tree sitter =(
