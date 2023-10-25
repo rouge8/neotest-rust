@@ -185,6 +185,9 @@ local query = [[
       (#eq? @macro "test")
     )
   )
+  .
+  (line_comment)*
+  .
   (function_item name: (identifier) @test.name) @test.definition
 ) 
 
@@ -368,8 +371,7 @@ function adapter.build_spec(args)
     local test_filter
     if position.type == "test" then
         position_id = position.id
-        -- TODO: Support rstest parametrized tests
-        test_filter = "-E " .. vim.fn.shellescape(package_filter .. "test(/^" .. position_id .. "/)")
+        test_filter = "-E " .. vim.fn.shellescape(package_filter .. "test(/^" .. position_id .. "(::.*)?$/)")
     elseif position.type == "file" then
         if package_name then
             -- A basic filter to run tests within the package that will be
