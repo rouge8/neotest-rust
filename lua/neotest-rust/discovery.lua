@@ -227,7 +227,7 @@ M.resolve_case_name = function(id, macro, file)
             " "
         )
     end
-    if macro == "<injected>" then
+    if macro == "<injected>" or "from" then
         -- Strip namespaces from test name `test::foo::bar` -> `bar`
         local parts = vim.split(id, "::")
         return parts[#parts]

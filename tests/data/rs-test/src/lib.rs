@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use rstest::{fixture, rstest};
+    use rstest::*;
 
     #[fixture]
     fn bar() -> i32 {
@@ -9,6 +9,15 @@ mod tests {
     #[rstest]
     fn fixture_injected(bar: i32) {
         assert_eq!(42, bar)
+    }
+
+    #[fixture]
+    fn long_and_boring_descriptive_name() -> i32 {
+        42
+    }
+    #[rstest]
+    fn fixture_rename(#[from(long_and_boring_descriptive_name)] short: i32) {
+        assert_eq!(42, short)
     }
 
     #[rstest]

@@ -226,7 +226,7 @@ local query = [[
 )
 
 ;; Matches `#[rstest] fn <test.name>(...)`
-;; ... or  `#[rstest] fn <test.name>(#[case/values/files] ...)`
+;; ... or  `#[rstest] fn <test.name>(#[from/case/values/files] ...)`
 (
   (attribute_item (attribute (identifier) @macro) (#eq? @macro "rstest"))
   .
@@ -238,7 +238,7 @@ local query = [[
   (function_item 
     name: (identifier) @test.name
     parameters: (parameters . (attribute_item (attribute (identifier) @parameterization ))? )
-    (#any-of? @parameterization "case" "values" "files")
+    (#any-of? @parameterization "from" "case" "values" "files")
   ) @test.definition
 )
 ]]
