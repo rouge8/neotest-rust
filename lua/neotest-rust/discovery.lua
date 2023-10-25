@@ -287,9 +287,10 @@ function M.cargo(path, positions, name_mapper)
     local tests = {}
     for key, value in pairs(json["rust-suites"]) do
         tests[key] = {}
-        for case, _ in pairs(value["testcases"]) do
+        for case in pairs(value["testcases"]) do
             table.insert(tests[key], case)
         end
+        table.sort(tests[key])
     end
     local target = binary_name(path)
     if target == nil then
@@ -299,7 +300,7 @@ function M.cargo(path, positions, name_mapper)
     for _, value in positions:iter_nodes() do
         local data = value:data()
         if data.type == "test" and data.parameterization ~= nil then
-            for _, case in pairs(tests[target]) do
+            for _, case in ipairs(tests[target]) do
                 if case:match("^" .. data.id .. "::") then
                     -- `case` is a parameterized version of `value`, so add it as child
                     local name = name_mapper(case:gsub("^" .. data.id .. "::", ""), data.parameterization, path)
