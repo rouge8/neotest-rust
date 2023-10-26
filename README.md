@@ -95,5 +95,23 @@ The following limitations apply to both running and debugging tests.
   `tests/testsuite/main.rs`), all tests in that subdirectory will be run (e.g.
   all tests in `tests/testsuite/`). This is because Cargo lacks the capability
   to specify a test file.
+- When using `#[test_case(...)]` for parameterized tests and `treesitter` as
+  discovery mode, make sure to _always_ use a test comment (e.g.
+  `#[test_case(arg1, arg2, ... ; "test_comment")]`). Otherwise the test runner
+  might not find this case. With `cargo` as strategy this is not strictly
+  necessary.
+- When using for example `#[rstest::files("**/*.txt")]` in a test the discovery
+  tries to heuristically "guess" each file and render it in the summary view.
+  This only works, though, if the file exists relative to the project root
+  and contains no special characters except underscores (and `.` before the file
+  extension). Otherwise the name resolution is just skipped and the `cargo`
+  id is displayed. Has no influence on the running of each test case, only for
+  the name in the summary. ![_](./media/rstest-files-naming.png)
+- When using a combination of `rstest` features the _first_ one in the argument
+  list always decides on the heuristic name resolution. For example if you have
+  a test like `fn foo(#[case] x: i32, #[files("*")] file: PathBuf) {}` the name
+  resolution will try to resolve the test ID based on the `case` attribute, which
+  is not consistent with the `files` rendering. Try swapping arguments if necessary.
+  Has no influence on the running of each test case, only for the name in the summary
 
 Additionally, when debugging tests, no output from failed tests will be captured in the results provided to Neotest.

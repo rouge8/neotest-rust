@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use rstest::*;
-    use std::time::Duration;
+    use std::{ffi::OsStr, path::PathBuf, time::Duration};
 
     #[rstest]
     #[timeout(Duration::from_millis(10))]
@@ -128,9 +128,14 @@ mod tests {
         assert_eq!(expected, delayed_sum(2, 2, delay).await);
     }
 
-    // Only supported by `parameterized_test_discovery="cargo"` mode right now. Too complex for a plain tree sitter =(
+    // The following are only supported by `parameterized_test_discovery="cargo"` mode right now. Too complex for a plain tree sitter =(
     #[rstest]
     fn combinations(#[values("a", "bb", "ccc")] word: &str, #[values(1, 2, 3)] has_chars: usize) {
         assert_eq!(word.chars().count(), has_chars)
+    }
+
+    #[rstest]
+    fn files(#[files("**/*.txt")] file: PathBuf) {
+        assert_eq!(file.extension(), Some(OsStr::new("txt")))
     }
 }
