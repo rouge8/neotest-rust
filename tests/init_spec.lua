@@ -166,7 +166,7 @@ describe("discover_positions", function()
                 id = vim.loop.cwd() .. "/tests/data/simple-package/src/mymod/mod.rs",
                 name = "mod.rs",
                 path = vim.loop.cwd() .. "/tests/data/simple-package/src/mymod/mod.rs",
-                range = { 0, 0, 9, 0 },
+                range = { 0, 0, 10, 0 },
                 type = "file",
             },
             {
@@ -174,7 +174,7 @@ describe("discover_positions", function()
                     id = "mymod::tests",
                     name = "tests",
                     path = vim.loop.cwd() .. "/tests/data/simple-package/src/mymod/mod.rs",
-                    range = { 3, 0, 8, 1 },
+                    range = { 4, 0, 9, 1 },
                     type = "namespace",
                 },
                 {
@@ -182,7 +182,7 @@ describe("discover_positions", function()
                         id = "mymod::tests::math",
                         name = "math",
                         path = vim.loop.cwd() .. "/tests/data/simple-package/src/mymod/mod.rs",
-                        range = { 5, 4, 7, 5 },
+                        range = { 6, 4, 8, 5 },
                         type = "test",
                     },
                 },
