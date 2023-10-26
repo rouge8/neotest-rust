@@ -312,7 +312,9 @@ function adapter.discover_positions(path)
     elseif param_discovery == "cargo" then
         positions = discovery.cargo(path, positions, resolve_case_name)
     elseif param_discovery ~= "none" then
-        logger.warn("Unsupported value `" .. param_discovery .. "` for parameterized_test_discovery. Assuming `none`")
+        logger.warn(
+            "Unsupported value `" .. tostring(param_discovery) .. "` for parameterized_test_discovery. Assuming `none`"
+        )
     end
 
     return positions
