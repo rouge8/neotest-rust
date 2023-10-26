@@ -186,7 +186,12 @@ local query = [[
     )
   )
   .
-  (line_comment)*
+  [
+    (line_comment)
+    ;; Don't match any attribute here but deliberately only "#[should_panic]" & "#[ignore]"
+    ;; macros here for regular tests to not interfere with parameterized tests
+    (attribute_item (attribute (identifier) @othermacro) (#any-of? @othermacro "should_panic" "ignore"))
+  ]*
   .
   (function_item name: (identifier) @test.name) @test.definition
 ) 
