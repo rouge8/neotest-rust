@@ -49,7 +49,7 @@ local function build_query(test)
 end
 
 -- See https://github.com/frondeus/test-case/blob/master/crates/test-case-core/src/utils.rs#L4
-local function escape_testcase_name(name)
+function M._escape_testcase_name(name)
     name = name:gsub('"', "") -- remove any surrounding dquotes from string literal
     if name == nil or name == "" then
         return "_empty"
@@ -85,8 +85,8 @@ function M.treesitter(path, positions)
     local root, lang = lib.treesitter.get_parse_root(path, content, { fast = true })
     for _, value in positions:iter_nodes() do
         local data = value:data()
-        local query = build_query(data.name)
         if data.parameterization ~= nil then
+            local query = build_query(data.name)
             local q = lib.treesitter.normalise_query(lang, query)
             local case_index = 1
 
@@ -106,7 +106,7 @@ function M.treesitter(path, positions)
                         if macro == "test_case" then
                             -- #[test_case(arg1, arg2, ... ; "foo bar")] -> test.name = "foo bar"
                             name = name:gsub('"', "") -- remove any surrounding dquotes from string literal
-                            id = escape_testcase_name(name)
+                            id = M._escape_testcase_name(name)
                         end
                         if macro == "case" then
                             -- #[case::foo_bar(arg1, arg2, ...)]  -> test.name = "foo_bar"
@@ -141,9 +141,9 @@ end
 --- binary:       <package>/src/bin/<bin>.rs -> <package>::bin/<bin>
 --- example:      <package>/examples/<bin>.rs -> <package>::example/<bin>
 --- @param path string
+--- @param workspace string|nil root of the project (containing Cargo.toml)
 --- @return string|nil
-local function binary_name(path)
-    local workspace = lib.files.match_root_pattern("Cargo.toml")(path)
+function M._binary_name(path, workspace)
     local parts = Path:new(workspace):_split()
     if parts == nil or #parts == 0 then
         return nil
@@ -152,7 +152,7 @@ local function binary_name(path)
     path = Path:new(path):make_relative(workspace):gsub(".rs$", "")
     if path:match("^src" .. Path.path.sep .. "bin") then
         -- tests in binary
-        return package .. "::" .. path:gsub("^src" .. Path.path.sep)
+        return package .. "::" .. path:gsub("^src" .. Path.path.sep, "")
     end
     if path:match("^tests") then
         -- integration test
@@ -282,7 +282,11 @@ end
 --- @return neotest.Tree `positions` with additional leafs for parameterized tests
 function M.cargo(path, positions, name_mapper)
     name_mapper = name_mapper or M.resolve_case_name
-    local command = "cargo nextest list --message-format json"
+    local workspace = lib.files.match_root_pattern("Cargo.toml")(path)
+    local command = "cargo nextest list --message-format json --manifest-path "
+        .. workspace
+        .. Path.path.sep
+        .. "Cargo.toml"
 
     local result = { lib.process.run(vim.split(command, "%s+"), { stdout = true, stderr = true }) }
     local code = result[1]
@@ -301,7 +305,8 @@ function M.cargo(path, positions, name_mapper)
         end
         table.sort(tests[key])
     end
-    local target = binary_name(path)
+
+    local target = M._binary_name(path, workspace)
     if target == nil then
         return positions
     end

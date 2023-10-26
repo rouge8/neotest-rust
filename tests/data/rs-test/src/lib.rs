@@ -61,8 +61,6 @@ mod tests {
     #[rstest]
     #[case::one(1)]
     #[case::two(2)]
-    #[case::three(3)]
-    #[case(4)]
     #[case::ten(10)]
     fn parameterized_with_descriptions(#[case] x: u64) {
         assert!(x < 10)
