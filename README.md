@@ -84,6 +84,42 @@ To discover parameterized tests `neotest-rust` offers two discovery strategies, 
 | discovery done | instantly (synchronous) when tree-sitter has parsed the document| delayed (asynchronously) when cargo has compiled the project |
 | case location (e.g. when you jump to test from summary panel and where result check marks are displayed) | Each case points to its corresponding macro above the test function ![_](./media/loc-treesitter.png) | All cases of a test point to test itself ![_](./media/loc-cargo.png) |
 
+### Name Heuristic
+
+When using the `cargo` discovery strategy `neotest-rust` tries to "guess" test case names based on their test IDs.
+A test ID is the one which `cargo nextest` uses to identify each test. Depending on the type of test case
+this heuristic does the following:
+
+| Macro                                       | ID                  | Name                                  |
+|:--------------------------------------------|:--------------------|:--------------------------------------|
+| `#[rstest::case(...)]`                      | `case_1`            | `case_1`                              |
+| `#[rstest::case::foo_bar(...)]`             | `case_1_foo_bar`    | `foo_bar`                             |
+| `#[rstest::values("foo", ...)] param: &str` | `param_1___foo__`   | `param["foo"]`                        |
+| `#[rstest::values(42, ...)] param: i32`     | `param_1_42`        | `param[42]`                           |
+| `#[rstest::files("**/*.rs")] file: PathBuf` | `file_1_src_lib_rs` | `file[src/lib.rs]` _(if this exists)_ |
+| otherwise                                   | any                 | same as ID                            |
+
+You can overwrite this behaviour by providing a custom mapping function during setup:
+
+```lua
+require("neotest").setup({
+  adapters = {
+    require("neotest-rust") {
+        parameterized_test_discovery = "cargo"
+        resolve_case_name = function(id, macro, file)
+            -- id:    string the test case identifier returned by `cargo nextest list`
+            -- macro: string the (first) macro name which makes this test parameterized (e.g. `values`, `files`, `test_case`, ...)
+            -- file:  path the path to the file under test
+            local name = ...
+            return name
+        end,
+    }
+  }
+})
+
+```
+
+
 
 ## Limitations
 
