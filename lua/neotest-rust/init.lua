@@ -290,7 +290,7 @@ end
 ---@return neotest.Tree | nil
 function adapter.discover_positions(path)
     local positions = lib.treesitter.parse_positions(path, query, {
-        require_namespaces = true,
+        require_namespaces = false,
         nested_tests = true,
         build_position = 'require("neotest-rust").build_position',
         position_id = function(position, namespaces)
