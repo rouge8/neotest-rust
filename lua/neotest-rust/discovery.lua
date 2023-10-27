@@ -9,26 +9,34 @@ local M = {}
 --- @return string
 local function build_query(test)
     return [[
+;; Matches `#[case::<test.name>]*fn <parent>()`                (rstest)
+(
+  (attribute_item
+     (attribute
+         (scoped_identifier
+            path: (identifier) @macro
+            name: (identifier) @test.name
+         ) (#eq? @macro "case")
+       )
+   ) @test.definition
+  .
+  [
+    (line_comment)
+    (attribute_item)
+  ]*
+  .
+  (function_item name: (identifier) @parent) (#eq? @parent "]] .. test .. [[")
+)
+
 ;; Matches `#[test_case(... ; "<test.name>")]*fn <parent>()`   (test_case)
 ;; ...  or `#[case(...)]*fn <parent>()`                        (rstest)
-;; ...  or `#[case::<test.name>]*fn <parent>()`                (rstest)
 (
-  [
-    (attribute_item
-      (attribute
-        (identifier) @macro (#any-of? @macro "test_case" "case")
-        arguments: (token_tree ((_) (string_literal)? @test.name . ))
-      )
-    )
-    (attribute_item
-      (attribute
-        (scoped_identifier
-           path: (identifier) @macro
-           name: (identifier) @test.name
-        ) (#eq? @macro "case")
-      )
-    )
-  ] @test.definition
+  (attribute_item
+       (attribute
+         (identifier) @macro (#any-of? @macro "test_case" "case")
+         arguments: (token_tree ((_) (string_literal)? @test.name . ))
+       )
+   ) @test.definition
   .
   [
     (line_comment)
@@ -73,7 +81,7 @@ end
 --- @param positions neotest.Tree of already parsed namespaces and tests (without parameterized tests)
 --- @return neotest.Tree `positions` with additional leafs for parameterized tests
 function M.treesitter(path, positions)
-    local content = lib.files.read(path, positions)
+    local content = lib.files.read(path)
     local root, lang = lib.treesitter.get_parse_root(path, content, { fast = true })
     for _, value in positions:iter_nodes() do
         local data = value:data()
@@ -81,6 +89,7 @@ function M.treesitter(path, positions)
         if data.parameterization ~= nil then
             local q = lib.treesitter.normalise_query(lang, query)
             local case_index = 1
+
             for _, match in q:iter_matches(root, content) do
                 local captured_nodes = {}
                 for i, capture in ipairs(q.captures) do
