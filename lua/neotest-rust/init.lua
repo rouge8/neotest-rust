@@ -68,6 +68,18 @@ end
 
 local param_discovery
 
+function adapter.set_param_discovery(strategy)
+    if strategy ~= "treesitter" and strategy ~= "cargo" and strategy ~= "none" then
+        lib.notify(
+            "Unsupported value `"
+                .. tostring(strategy)
+                .. "` for parameterized_test_discovery. Provide one of {`treesitter`, `cargo`, `none`}"
+        )
+        return
+    end
+    param_discovery = strategy
+end
+
 local is_callable = function(obj)
     return type(obj) == "function" or (type(obj) == "table" and obj.__call)
 end

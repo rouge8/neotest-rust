@@ -59,7 +59,13 @@ engines to generate the test cases. `neotest-rust` currently supports:
 * [rstest](https://crates.io/crates/rstest)
 * [test_case](https://crates.io/crates/test-case)
 
-To discover parameterized tests `neotest-rust` offers two discovery strategies, which you can choose by setting the `parameterized_test_discovery` option during setup (or choose `none` to disable them entirely). Both have their unique characteristics:
+To discover parameterized tests `neotest-rust` offers two discovery strategies, which you can choose by setting the `parameterized_test_discovery` option during setup (or choose `none` to disable them entirely). Alternatively you can call this lua function to set the discovery mode:
+
+```lua
+require("neotest-rust").set_param_discovery("treesitter")
+```
+
+Both strategies have their unique characteristics:
 
 | `parameterized_test_discovery` | `"treesitter"` | `"cargo"` |
 |:---------|:------------|:------|
