@@ -192,7 +192,7 @@ local query = [[
 
 ;; Matches `#[test]`
 (
-  (attribute_item 
+  (attribute_item
     (attribute (identifier) @macro
       (#eq? @macro "test")
     )
@@ -206,7 +206,7 @@ local query = [[
   ]*
   .
   (function_item name: (identifier) @test.name) @test.definition
-) 
+)
 
 ;; Matches `#[test_case(...)] fn <test.name>()`
 (
@@ -255,7 +255,7 @@ local query = [[
     (attribute_item)
   ]*
   .
-  (function_item 
+  (function_item
     name: (identifier) @test.name
     parameters: (parameters . (attribute_item (attribute (identifier) @parameterization ))? )
     (#any-of? @parameterization "from" "with" "case" "values" "files" "future")
