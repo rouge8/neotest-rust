@@ -359,7 +359,9 @@ function adapter.results(spec, result, tree)
         local root = xml.parse(data)
 
         local testsuites
-        if #root.testsuites.testsuite == 0 then
+        if root.testsuites.testsuite == nil then
+            testsuites = {}
+        elseif #root.testsuites.testsuite == 0 then
             testsuites = { root.testsuites.testsuite }
         else
             testsuites = root.testsuites.testsuite
