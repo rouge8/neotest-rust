@@ -1131,3 +1131,19 @@ describe("results", function()
         assert.are.same(expected, results)
     end)
 end)
+
+describe("filter_dir", function()
+    it("doesn't exclude the src directory", function()
+        local adapter = require("neotest-rust")({})
+        local root = vim.loop.cwd() .. "/tests/data/simple-package"
+
+        assert.equals(adapter.filter_dir("src", "src", root), true)
+    end)
+
+    it("excludes the target directory", function()
+        local adapter = require("neotest-rust")({})
+        local root = vim.loop.cwd() .. "/tests/data/simple-package"
+
+        assert.equals(adapter.filter_dir("target", "target", root), false)
+    end)
+end)

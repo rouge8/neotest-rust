@@ -75,6 +75,16 @@ function adapter.is_test_file(file_path)
     return vim.endswith(file_path, ".rs") and #adapter.discover_positions(file_path):to_list() ~= 1
 end
 
+---Filter directories when searching for test files
+---@async
+---@param name string Name of directory
+---@param rel_path string Path to directory, relative to root
+---@param root string Root directory of project
+---@return boolean
+function adapter.filter_dir(name, rel_path, root)
+    return root .. Path.path.sep .. rel_path ~= cargo_metadata(root).target_directory
+end
+
 local get_package_root = lib.files.match_root_pattern("Cargo.toml")
 
 local function is_unit_test(path)
