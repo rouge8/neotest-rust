@@ -2,7 +2,8 @@
 <testsuites name="nextest-run" tests="4" failures="2" errors="0" uuid="148332a3-772e-45ec-be48-0cd9be5afd62" timestamp="2022-12-16T12:05:30.587+00:00" time="0.002">
     <testsuite name="tmp::bin/tmp" tests="2" disabled="0" errors="0" failures="1">
         <testcase name="foo::tests::should_fail" classname="tmp::bin/tmp" timestamp="2022-12-16T12:05:30.587+00:00" time="0.001">
-            <failure type="test failure">thread &apos;foo::tests::should_fail&apos; panicked at &apos;assertion failed: false&apos;, src/foo.rs:10:9
+            <failure type="test failure">thread &apos;foo::tests::should_fail&apos; panicked at src/foo.rs:10:9:
+assertion failed: false
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace</failure>
             <system-out>
 running 1 test
@@ -16,7 +17,8 @@ failures:
 test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
 
 </system-out>
-            <system-err>thread &apos;foo::tests::should_fail&apos; panicked at &apos;assertion failed: false&apos;, src/foo.rs:10:9
+            <system-err>thread &apos;foo::tests::should_fail&apos; panicked at src/foo.rs:10:9:
+assertion failed: false
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 </system-err>
         </testcase>
@@ -25,7 +27,8 @@ note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
     </testsuite>
     <testsuite name="tmp::tests" tests="2" disabled="0" errors="0" failures="1">
         <testcase name="should_fail" classname="tmp::tests" timestamp="2022-12-16T12:05:30.587+00:00" time="0.001">
-            <failure type="test failure">thread &apos;should_fail&apos; panicked at &apos;assertion failed: false&apos;, tests/tests.rs:8:5
+            <failure type="test failure">thread &apos;should_fail&apos; panicked at tests/tests.rs:8:5:
+assertion failed: false
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace</failure>
             <system-out>
 running 1 test
@@ -39,7 +42,8 @@ failures:
 test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
 
 </system-out>
-            <system-err>thread &apos;should_fail&apos; panicked at &apos;assertion failed: false&apos;, tests/tests.rs:8:5
+            <system-err>thread &apos;should_fail&apos; panicked at tests/tests.rs:8:5
+assertion failed: false
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 </system-err>
         </testcase>

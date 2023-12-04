@@ -4,7 +4,8 @@
         <testcase name="foo::tests::should_pass" classname="tmp::bin/tmp" timestamp="2022-12-16T12:05:54.600+00:00" time="0.001">
         </testcase>
         <testcase name="foo::tests::should_fail" classname="tmp::bin/tmp" timestamp="2022-12-16T12:05:54.600+00:00" time="0.002">
-            <failure type="test failure">thread &apos;foo::tests::should_fail&apos; panicked at &apos;assertion failed: false&apos;, src/foo.rs:10:9
+            <failure type="test failure">thread &apos;foo::tests::should_fail&apos; panicked at src/foo.rs:10:9:
+assertion failed: false
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace</failure>
             <system-out>
 running 1 test
@@ -18,7 +19,8 @@ failures:
 test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
 
 </system-out>
-            <system-err>thread &apos;foo::tests::should_fail&apos; panicked at &apos;assertion failed: false&apos;, src/foo.rs:10:9
+            <system-err>thread &apos;foo::tests::should_fail&apos; panicked at src/foo.rs:10:9:
+assertion failed: false
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 </system-err>
         </testcase>
