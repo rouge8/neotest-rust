@@ -83,15 +83,18 @@ end
 -- Determine if mod is in <mod_name>.rs or <mod_name>/mod.rs
 local function construct_mod_path(src_path, mod_name)
     local match_str = "(.-)[^\\/]-%.?(%w+)%.?[^\\/]*$"
-    local abs_path, _ = string.match(src_path, match_str)
+    local abs_path, parent_mod = string.match(src_path, match_str)
 
     local mod_file = abs_path .. mod_name .. ".rs"
     local mod_dir = abs_path .. mod_name .. sep .. "mod.rs"
+    local child_mod = abs_path .. parent_mod .. sep .. mod_name .. ".rs"
 
     if util.file_exists(mod_file) then
         return mod_file
     elseif util.file_exists(mod_dir) then
         return mod_dir
+    elseif util.file_exists(child_mod) then
+        return child_mod
     end
 
     return nil
