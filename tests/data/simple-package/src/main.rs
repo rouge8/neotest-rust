@@ -1,4 +1,5 @@
 mod mymod;
+mod parent;
 
 fn main() {
     println!("Hello, world!");

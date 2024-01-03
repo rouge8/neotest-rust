@@ -61,6 +61,13 @@ describe("get_test_binary", function()
             assert.equal(expected, actual)
         end)
 
+        async.it("returns the test binary for src/parent/child.rs", function()
+            local expected = main_actual
+            local actual = dap.get_test_binary(root, root .. "/src/parent/child.rs")
+
+            assert.equal(expected, actual)
+        end)
+
         async.it("returns the test binary for tests/test_it.rs", function()
             assert(test_it_actual)
             local expected = root .. "/target/debug/deps/test_it-"
