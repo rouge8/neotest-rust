@@ -42,8 +42,8 @@ mod tests {
     async fn magic() -> i32 {
         42
     }
+
     #[rstest]
-    #[tokio::test]
     async fn fixture_async(#[future] magic: i32) {
         assert_eq!(magic.await, 42)
     }
@@ -78,21 +78,21 @@ mod tests {
     }
 
     #[rstest]
+    #[async_std::test]
     #[case(0)]
     // random comment in between
     #[case(1)]
     #[case(5)]
     #[case(42)]
-    #[async_std::test]
     async fn parameterized_async_std(#[case] x: u64) {
         assert!(x < 10)
     }
 
     #[rstest]
+    #[tokio::test]
     #[case::even(async { 2 })]
     // random comment in between
     #[case::odd(async { 3 })]
-    #[tokio::test]
     async fn parameterized_async_parameter(
         #[future]
         #[case]

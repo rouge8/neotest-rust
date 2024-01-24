@@ -190,7 +190,7 @@ local query = [[
 ;; Matches mod <namespace.name> {}
 ((mod_item name: (identifier) @namespace.name) @namespace.definition)
 
-;; Matches `#[test]`
+;; Matches `#[test] fn <test.name>()`
 (
   (attribute_item
     (attribute (identifier) @macro
@@ -205,16 +205,47 @@ local query = [[
     (attribute_item (attribute (identifier) @othermacro) (#any-of? @othermacro "should_panic" "ignore"))
   ]*
   .
-  (function_item name: (identifier) @test.name) @test.definition
+  (function_item 
+    name: (identifier) @test.name 
+    parameters: (parameters) @params
+  ) @test.definition
+  (#eq? @params "()")
 )
 
-;; Matches `#[test_case(...)] fn <test.name>()`
+;; Matches `#[{tokio,async_std}::test] async fn <test.name>()`
+(
+  (attribute_item
+    (attribute
+      (scoped_identifier
+        path: (identifier) @package
+        name: (identifier)
+      )
+    )
+    ;; all packages which provide a #[<package>::test] macro
+    (#any-of? @package "tokio" "async_std")
+  )
+  .
+  (line_comment)*
+  .
+  (function_item
+    (function_modifiers) @modifier
+    name: (identifier) @test.name
+    parameters: (parameters) @params
+  ) @test.definition
+  (#eq? @modifier "async")
+  (#eq? @params "()")
+)
+
+;; Matches `#[test_case(...)] fn <test.name>(...)`
 (
   (attribute_item (attribute (identifier) @parameterization) (#eq? @parameterization "test_case"))
   .
   (line_comment)*
   .
-  (function_item name: (identifier) @test.name) @test.definition
+  (function_item
+    name: (identifier) @test.name
+    parameters: (parameters (parameter))
+  ) @test.definition
 )
 
 ;; Matches `#[test_case(...)] #[{tokio,async_std}::test] async fn <test.name>()`
@@ -241,6 +272,7 @@ local query = [[
   (function_item
     (function_modifiers) @modifier
     name: (identifier) @test.name
+    parameters: (parameters (parameter))
   ) @test.definition
   (#eq? @modifier "async")
 )

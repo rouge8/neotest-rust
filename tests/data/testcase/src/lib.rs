@@ -27,4 +27,14 @@ mod tests {
     async fn third(y: bool) {
         assert!(y)
     }
+
+    #[tokio::test]
+    async fn plain_tokio() {
+        assert!(true)
+    }
+
+    #[async_std::test]
+    async fn plain_async_std() {
+        assert!(true)
+    }
 }

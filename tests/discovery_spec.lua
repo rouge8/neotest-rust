@@ -181,7 +181,7 @@ describe("discovery", function()
                         id = "tests",
                         name = "tests",
                         type = "namespace",
-                        range = { 1, 0, 29, 1 },
+                        range = { 1, 0, 39, 1 },
                         parameterization = nil,
                     },
                 })
@@ -222,6 +222,30 @@ describe("discovery", function()
                         type = "test",
                         range = { 26, 4, 28, 5 },
                         parameterization = '#[test_case(false ; "no")]',
+                    },
+                })
+            end)
+
+            async.it("has test named `plain_tokio`", function()
+                assert.is.same(discover(strategy, file, with_id("^tests::plain_tokio$")), {
+                    {
+                        id = "tests::plain_tokio",
+                        name = "plain_tokio",
+                        path = file,
+                        type = "test",
+                        range = { 31, 4, 33, 5 },
+                    },
+                })
+            end)
+
+            async.it("has test named `plain_async_std`", function()
+                assert.is.same(discover(strategy, file, with_id("^tests::plain_async_std")), {
+                    {
+                        id = "tests::plain_async_std",
+                        name = "plain_async_std",
+                        path = file,
+                        type = "test",
+                        range = { 36, 4, 38, 5 },
                     },
                 })
             end)
@@ -283,7 +307,7 @@ describe("discovery", function()
                         id = "tests",
                         name = "tests",
                         type = "namespace",
-                        range = { 1, 0, 29, 1 },
+                        range = { 1, 0, 39, 1 },
                         parameterization = nil,
                     },
                 })
@@ -655,28 +679,28 @@ describe("discovery", function()
                             name = "case_1",
                             path = file,
                             type = "test",
-                            range = { 80, 4, 80, 14 },
+                            range = { 81, 4, 81, 14 },
                         },
                         {
                             id = "tests::parameterized_async_std::case_2",
                             name = "case_2",
                             path = file,
                             type = "test",
-                            range = { 82, 4, 82, 14 },
+                            range = { 83, 4, 83, 14 },
                         },
                         {
                             id = "tests::parameterized_async_std::case_3",
                             name = "case_3",
                             path = file,
                             type = "test",
-                            range = { 83, 4, 83, 14 },
+                            range = { 84, 4, 84, 14 },
                         },
                         {
                             id = "tests::parameterized_async_std::case_4",
                             name = "case_4",
                             path = file,
                             type = "test",
-                            range = { 84, 4, 84, 15 },
+                            range = { 85, 4, 85, 15 },
                         },
                     })
                 end)
@@ -688,14 +712,14 @@ describe("discovery", function()
                             name = "even",
                             path = file,
                             type = "test",
-                            range = { 91, 4, 91, 30 },
+                            range = { 92, 4, 92, 30 },
                         },
                         {
                             id = "tests::parameterized_async_parameter::case_2_odd",
                             name = "odd",
                             path = file,
                             type = "test",
-                            range = { 93, 4, 93, 29 },
+                            range = { 94, 4, 94, 29 },
                         },
                     })
                 end)
