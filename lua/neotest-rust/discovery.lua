@@ -134,11 +134,13 @@ function M.treesitter(path, positions)
     return positions
 end
 
---- Given a certain path to a rust file, guess its [test binary name](https://nexte.st/book/running.html)
---
+--- Given a certain `path` to a rust file, the path to its package `workspace` and
+--- the contents of the package's `cargo_toml`, guess its [test binary name](https://nexte.st/book/running.html)
+---
 --- unit tests:   <package>/src/<path>  -> <package>
 --- integration:  <package>/tests/<mod>.rs  -> <package>::<mod>
 --- binary:       <package>/src/bin/<bin>.rs -> <package>::bin/<bin>
+--- binary:       <package>/src/main.rs -> <package>::bin/<package>
 --- example:      <package>/examples/<bin>.rs -> <package>::example/<bin>
 --- @param path string
 --- @param workspace string|nil root of the project (containing Cargo.toml)
@@ -161,6 +163,10 @@ function M._binary_name(path, workspace)
     if path:match("^examples") then
         -- tests in example
         return package .. "::example" .. path:gsub("^examples", "")
+    end
+    if path:match("^src/main$") then
+        -- tests in main executable
+        return package .. "::bin/" .. package
     end
     if path:match("^src") then
         -- unit test

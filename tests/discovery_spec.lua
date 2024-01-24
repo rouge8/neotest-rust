@@ -70,6 +70,10 @@ describe("binary_path", function()
         assert.equals("package::example/foo", discovery._binary_name(workspace() .. "/examples/foo.rs", workspace()))
     end)
 
+    it("checks main.rs", function()
+        assert.equals("package::bin/package", discovery._binary_name(workspace() .. "/src/main.rs", workspace()))
+    end)
+
     it("returns nil for unknown path", function()
         assert.equals(nil, discovery._binary_name(workspace() .. "foo/bar"))
     end)
