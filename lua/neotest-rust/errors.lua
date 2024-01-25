@@ -10,6 +10,11 @@ function M.parse_errors(output)
 
     local message, line = output:match("thread '[^']+' panicked at '([^']+)', [^:]+:(%d+):%d+")
 
+    if message == nil then
+        -- Try a different expression
+        _, line, message = output:match("thread '[^']+' panicked at ([^:]+):(%d+):[^:]+:\n([^\n]*)")
+    end
+
     -- If we can't parse the output, return an empty table
     if message == nil then
         return {}
