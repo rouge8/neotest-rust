@@ -207,8 +207,8 @@ local query = [[
     (attribute_item (attribute (identifier) @othermacro) (#any-of? @othermacro "should_panic" "ignore"))
   ]*
   .
-  (function_item 
-    name: (identifier) @test.name 
+  (function_item
+    name: (identifier) @test.name
     parameters: (parameters) @params
   ) @test.definition
   (#eq? @params "()")
