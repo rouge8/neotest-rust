@@ -25,7 +25,9 @@ local cargo_metadata = setmetatable({}, {
                 args = { "metadata", "--no-deps" },
                 cwd = cwd,
                 on_exit = function(j, return_val)
-                    metadata = vim.json.decode(j:result()[1])
+                    if return_val == 0 then
+                        metadata = vim.json.decode(j:result()[1])
+                    end
                 end,
             }):sync()
             self[cwd] = metadata
