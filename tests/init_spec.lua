@@ -982,12 +982,12 @@ describe("results", function()
 
         local expected = {
             ["foo::tests::should_fail"] = {
-                short = "thread 'foo::tests::should_fail' panicked at 'assertion failed: false', src/foo.rs:10:9\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
+                short = "thread 'foo::tests::should_fail' panicked at src/foo.rs:10:9:\nassertion failed: false\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
                 status = "failed",
                 errors = {
                     {
                         line = 9,
-                        message = "assertion failed: false",
+                        message = "assertion failed: false\n",
                     },
                 },
             },
@@ -1040,17 +1040,17 @@ describe("results", function()
 
         local expected = {
             ["foo::tests::should_fail"] = {
-                short = "thread 'foo::tests::should_fail' panicked at 'assertion failed: false', src/foo.rs:10:9\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
+                short = "thread 'foo::tests::should_fail' panicked at src/foo.rs:10:9:\nassertion failed: false\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
                 status = "failed",
-                errors = { { line = 9, message = "assertion failed: false" } },
+                errors = { { line = 9, message = "assertion failed: false\n" } },
             },
             ["foo::tests::should_pass"] = {
                 status = "passed",
             },
             should_fail = {
-                short = "thread 'should_fail' panicked at 'assertion failed: false', tests/tests.rs:8:5\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
+                short = "thread 'should_fail' panicked at tests/tests.rs:8:5:\nassertion failed: false\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
                 status = "failed",
-                errors = { { line = 7, message = "assertion failed: false" } },
+                errors = { { line = 7, message = "assertion failed: false\n" } },
             },
             should_pass = {
                 status = "passed",
