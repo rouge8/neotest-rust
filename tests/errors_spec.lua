@@ -53,7 +53,7 @@ note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
         local results = errors.parse_errors(output)
         local expected = {
             {
-                line = 86,
+                line = 85,
                 message = "called `Result::unwrap()` on an `Err` value: unexpected end of input while parsing min or version number",
             },
         }
