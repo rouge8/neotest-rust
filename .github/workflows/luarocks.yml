@@ -1,0 +1,24 @@
+---
+name: "Luarocks"
+on:
+  pull_request: # Tests the luarocks package build on PR
+  workflow_dispatch:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    name: Luarocks upload
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: LuaRocks Upload
+        uses: nvim-neorocks/luarocks-tag-release@v5
+        env:
+          LUAROCKS_API_KEY: ${{ secrets.LUAROCKS_API_KEY }}
+        with:
+          dependencies: |
+            neotest
+            nvim-treesitter
