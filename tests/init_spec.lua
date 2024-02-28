@@ -166,7 +166,7 @@ describe("discover_positions", function()
                 id = vim.loop.cwd() .. "/tests/data/simple-package/src/mymod/mod.rs",
                 name = "mod.rs",
                 path = vim.loop.cwd() .. "/tests/data/simple-package/src/mymod/mod.rs",
-                range = { 0, 0, 9, 0 },
+                range = { 0, 0, 10, 0 },
                 type = "file",
             },
             {
@@ -174,7 +174,7 @@ describe("discover_positions", function()
                     id = "mymod::tests",
                     name = "tests",
                     path = vim.loop.cwd() .. "/tests/data/simple-package/src/mymod/mod.rs",
-                    range = { 3, 0, 8, 1 },
+                    range = { 4, 0, 9, 1 },
                     type = "namespace",
                 },
                 {
@@ -182,7 +182,7 @@ describe("discover_positions", function()
                         id = "mymod::tests::math",
                         name = "math",
                         path = vim.loop.cwd() .. "/tests/data/simple-package/src/mymod/mod.rs",
-                        range = { 5, 4, 7, 5 },
+                        range = { 6, 4, 8, 5 },
                         type = "test",
                     },
                 },
@@ -390,7 +390,10 @@ describe("build_spec", function()
             end, {})
 
             local spec = plugin.build_spec({ tree = tree })
-            assert.equal(spec.context.test_filter, "-E " .. vim.fn.shellescape("test(/^mymod::foo::tests::math$/)"))
+            assert.equal(
+                spec.context.test_filter,
+                "-E " .. vim.fn.shellescape("test(/^mymod::foo::tests::math(::.*)?$/)")
+            )
             assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/simple-package")
         end)
 
@@ -489,7 +492,7 @@ describe("build_spec", function()
             end, {})
 
             local spec = plugin.build_spec({ tree = tree })
-            assert.equal(spec.context.test_filter, "-E " .. vim.fn.shellescape("test(/^top_level_math$/)"))
+            assert.equal(spec.context.test_filter, "-E " .. vim.fn.shellescape("test(/^top_level_math(::.*)?$/)"))
             assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/simple-package")
             assert.matches(".+ %-%-test test_it", spec.command)
         end)
@@ -519,7 +522,10 @@ describe("build_spec", function()
             end, {})
 
             local spec = plugin.build_spec({ tree = tree })
-            assert.equal(spec.context.test_filter, "-E " .. vim.fn.shellescape("test(/^testsuite_top_level_math$/)"))
+            assert.equal(
+                spec.context.test_filter,
+                "-E " .. vim.fn.shellescape("test(/^testsuite_top_level_math(::.*)?$/)")
+            )
             assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/simple-package")
             assert.matches(".+ %-%-test testsuite ", spec.command)
         end)
@@ -549,7 +555,10 @@ describe("build_spec", function()
             end, {})
 
             local spec = plugin.build_spec({ tree = tree })
-            assert.equal(spec.context.test_filter, "-E " .. vim.fn.shellescape("test(/^it::testsuite_it_math$/)"))
+            assert.equal(
+                spec.context.test_filter,
+                "-E " .. vim.fn.shellescape("test(/^it::testsuite_it_math(::.*)?$/)")
+            )
             assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/simple-package")
             assert.matches(".+ %-%-test testsuite ", spec.command)
         end)
@@ -606,7 +615,7 @@ describe("build_spec", function()
             local spec = plugin.build_spec({ tree = tree })
             assert.equal(
                 spec.context.test_filter,
-                "-E " .. vim.fn.shellescape("package(with_integration_tests) & test(/^it_works$/)")
+                "-E " .. vim.fn.shellescape("package(with_integration_tests) & test(/^it_works(::.*)?$/)")
             )
             assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/workspace")
             assert.matches(".+ %-%-test it", spec.command)
@@ -640,7 +649,7 @@ describe("build_spec", function()
                 local spec = plugin.build_spec({ tree = tree })
                 assert.equal(
                     spec.context.test_filter,
-                    "-E " .. vim.fn.shellescape("package(with_unit_tests) & test(/^test_it$/)")
+                    "-E " .. vim.fn.shellescape("package(with_unit_tests) & test(/^test_it(::.*)?$/)")
                 )
                 assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/workspace")
             end)
@@ -676,7 +685,7 @@ describe("build_spec", function()
                 local spec = plugin.build_spec({ tree = tree })
                 assert.equal(
                     spec.context.test_filter,
-                    "-E " .. vim.fn.shellescape("package(some_other_name) & test(/^test_it$/)")
+                    "-E " .. vim.fn.shellescape("package(some_other_name) & test(/^test_it(::.*)?$/)")
                 )
                 assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/workspace")
             end)
