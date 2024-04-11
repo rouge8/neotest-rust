@@ -1,7 +1,9 @@
 local async = require("neotest.async")
+local logger = require("neotest.logging")
 local context_manager = require("plenary.context_manager")
 local dap = require("neotest-rust.dap")
 local util = require("neotest-rust.util")
+local discovery = require("neotest-rust.discovery")
 local errors = require("neotest-rust.errors")
 local Job = require("plenary.job")
 local open = context_manager.open
@@ -23,7 +25,9 @@ local cargo_metadata = setmetatable({}, {
                 args = { "metadata", "--no-deps" },
                 cwd = cwd,
                 on_exit = function(j, return_val)
-                    metadata = vim.json.decode(j:result()[1])
+                    if return_val == 0 then
+                        metadata = vim.json.decode(j:result()[1])
+                    end
                 end,
             }):sync()
             self[cwd] = metadata
@@ -62,6 +66,20 @@ end
 
 local get_dap_adapter = function()
     return "codelldb"
+end
+
+local param_discovery
+
+function adapter.set_param_discovery(strategy)
+    if strategy ~= "treesitter" and strategy ~= "cargo" and strategy ~= "none" then
+        lib.notify(
+            "Unsupported value `"
+                .. tostring(strategy)
+                .. "` for parameterized_test_discovery. Provide one of {`treesitter`, `cargo`, `none`}"
+        )
+        return
+    end
+    param_discovery = strategy
 end
 
 local is_callable = function(obj)
@@ -160,48 +178,172 @@ local function binary_name(path)
     return vim.split(path, "/")[1]
 end
 
+local function get_match_type(captured_nodes)
+    if captured_nodes["test.name"] then
+        return "test"
+    end
+    if captured_nodes["namespace.name"] then
+        return "namespace"
+    end
+end
+
+-- Tree Sitter query to discover test structure in document
+local query = [[
+;; Matches mod <namespace.name> {}
+((mod_item name: (identifier) @namespace.name) @namespace.definition)
+
+;; Matches `#[test] fn <test.name>()`
+(
+  (attribute_item
+    (attribute (identifier) @macro
+      (#eq? @macro "test")
+    )
+  )
+  .
+  [
+    (line_comment)
+    ;; Don't match any attribute here but deliberately only "#[should_panic]" & "#[ignore]"
+    ;; macros here for regular tests to not interfere with parameterized tests
+    (attribute_item (attribute (identifier) @othermacro) (#any-of? @othermacro "should_panic" "ignore"))
+  ]*
+  .
+  (function_item
+    name: (identifier) @test.name
+    parameters: (parameters) @params
+  ) @test.definition
+  (#eq? @params "()")
+)
+
+;; Matches `#[{tokio,async_std}::test] async fn <test.name>()`
+(
+  (attribute_item
+    (attribute
+      (scoped_identifier
+        path: (identifier) @package
+        name: (identifier)
+      )
+    )
+    ;; all packages which provide a #[<package>::test] macro
+    (#any-of? @package "tokio" "async_std")
+  )
+  .
+  (line_comment)*
+  .
+  (function_item
+    (function_modifiers) @modifier
+    name: (identifier) @test.name
+    parameters: (parameters) @params
+  ) @test.definition
+  (#eq? @modifier "async")
+  (#eq? @params "()")
+)
+
+;; Matches `#[test_case(...)] fn <test.name>(...)`
+(
+  (attribute_item (attribute (identifier) @parameterization) (#eq? @parameterization "test_case"))
+  .
+  (line_comment)*
+  .
+  (function_item
+    name: (identifier) @test.name
+    parameters: (parameters (parameter))
+  ) @test.definition
+)
+
+;; Matches `#[test_case(...)] #[{tokio,async_std}::test] async fn <test.name>()`
+(
+  (attribute_item
+    (attribute (identifier) @macro) (#eq? @macro "test_case")
+  ) @parameterization
+  .
+  (line_comment)*
+  .
+  (attribute_item
+    (attribute
+      (scoped_identifier
+        path: (identifier) @package
+        name: (identifier)
+      )
+    )
+    ;; all packages which provide a #[<package>::test] macro
+    (#any-of? @package "tokio" "async_std")
+  )
+  .
+  (line_comment)*
+  .
+  (function_item
+    (function_modifiers) @modifier
+    name: (identifier) @test.name
+    parameters: (parameters (parameter))
+  ) @test.definition
+  (#eq? @modifier "async")
+)
+
+;; Matches `#[rstest] fn <test.name>(...)`
+;; ... or  `#[rstest] fn <test.name>(#[from/with/case/values/files/future] ...)`
+(
+  (attribute_item (attribute (identifier) @macro) (#eq? @macro "rstest"))
+  .
+  [
+    (line_comment)
+    (attribute_item)
+  ]*
+  .
+  (function_item
+    name: (identifier) @test.name
+    parameters: (parameters . (attribute_item (attribute (identifier) @parameterization ))? )
+    (#any-of? @parameterization "from" "with" "case" "values" "files" "future")
+  ) @test.definition
+)
+]]
+
+-- Given a `file_path` with its content as `source` and the `nodes` captured by tree-sitter
+-- build position object containing:
+---@param file_path string
+---@param source string
+---@param nodes
+---@return table<string, neotest.Result>|nil
+---
+-- * `type`: Either `namespace` or `test`, depending if the ts query captured `test.name` or `namespace.name`
+-- * `path`: same as `file_path`
+-- * `name`: text of `<type>.name` capture
+-- * `range`: start and end position (row, col) of the test or namespace according to the `<type>.definition` capture
+-- * `parameterization`: contains the macro name (e.g. `case`, `test_case`, `values` ... ) if the test is parameterized
+--                      (e.g. has a #[test_case(...)] or #[rstest::case] in front of it (heueristic) or nil if unparameterized
+function adapter.build_position(file_path, source, nodes)
+    local type = get_match_type(nodes)
+    if not type then
+        return
+    end
+
+    local parameterization
+
+    if nodes["macro"] and vim.treesitter.get_node_text(nodes["macro"], source) == "rstest" then
+        -- Need this because rstest function can also contain injected fixture without any parameterization attribute
+        parameterization = "<injected>"
+    end
+    if nodes["parameterization"] then
+        parameterization = vim.treesitter.get_node_text(nodes["parameterization"], source)
+    end
+
+    return {
+        type = type,
+        path = file_path,
+        name = vim.treesitter.get_node_text(nodes[type .. ".name"], source),
+        range = { nodes[type .. ".definition"]:range() },
+        parameterization = parameterization,
+    }
+end
+
 ---Given a file path, parse all the tests within it.
 ---@async
 ---@param path string Absolute file path
 ---@return neotest.Tree | nil
 function adapter.discover_positions(path)
-    local query = [[;; query
-(
-  (attribute_item
-    [
-      (attribute
-        (identifier) @macro_name
-      )
-      (attribute
-        [
-	  (identifier) @macro_name
-	  (scoped_identifier
-	    name: (identifier) @macro_name
-          )
-        ]
-      )
-    ]
-  )
-  [
-  (attribute_item
-    (attribute
-      (identifier)
-    )
-  )
-  (line_comment)
-  ]*
-  .
-  (function_item
-    name: (identifier) @test.name
-  ) @test.definition
-  (#any-of? @macro_name "test" "rstest" "case")
-
-)
-(mod_item name: (identifier) @namespace.name)? @namespace.definition
-    ]]
-
-    return lib.treesitter.parse_positions(path, query, {
+    local positions = lib.treesitter.parse_positions(path, query, {
         require_namespaces = false,
+        nested_tests = true,
+        build_position = 'require("neotest-rust").build_position',
         position_id = function(position, namespaces)
             return table.concat(
                 vim.tbl_flatten({
@@ -215,6 +357,18 @@ function adapter.discover_positions(path)
             )
         end,
     })
+
+    if param_discovery == "treesitter" then
+        positions = discovery.treesitter(path, positions)
+    elseif param_discovery == "cargo" then
+        positions = discovery.cargo(path, positions, resolve_case_name)
+    elseif param_discovery ~= "none" then
+        logger.warn(
+            "Unsupported value `" .. tostring(param_discovery) .. "` for parameterized_test_discovery. Assuming `none`"
+        )
+    end
+
+    return positions
 end
 
 ---@param args neotest.RunArgs
@@ -270,8 +424,7 @@ function adapter.build_spec(args)
     local test_filter
     if position.type == "test" then
         position_id = position.id
-        -- TODO: Support rstest parametrized tests
-        test_filter = "-E " .. vim.fn.shellescape(package_filter .. "test(/^" .. position_id .. "$/)")
+        test_filter = "-E " .. vim.fn.shellescape(package_filter .. "test(/^" .. position_id .. "(::.*)?$/)")
     elseif position.type == "file" then
         if package_name then
             -- A basic filter to run tests within the package that will be
@@ -368,6 +521,11 @@ function adapter.results(spec, result, tree)
 
         local root = xml.parse(data)
 
+        if root.testsuites.testsuite == nil then
+            lib.notify("Test didn't produce any output")
+            return results
+        end
+
         local testsuites
         if root.testsuites.testsuite == nil then
             testsuites = {}
@@ -429,6 +587,8 @@ setmetatable(adapter, {
                 return opts.dap_adapter
             end
         end
+        param_discovery = opts.parameterized_test_discovery or "none"
+        resolve_case_name = opts.resolve_case_name
         return adapter
     end,
 })
