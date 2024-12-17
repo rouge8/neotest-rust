@@ -18,6 +18,5 @@ jobs:
 
       - name: Run tests
         run: |
-          export PATH="${PWD}/_neovim/bin:${PATH}"
           nvim --version
           make test
