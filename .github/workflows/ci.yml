@@ -15,7 +15,7 @@ jobs:
       - name: Prepare dependencies
         run: |
           mkdir -p _neovim
-          curl -sL https://github.com/neovim/neovim/releases/download/v0.9.0/nvim-linux64.tar.gz | tar xzf - --strip-components=1 -C "${PWD}/_neovim"
+          curl -sL https://github.com/neovim/neovim/releases/download/v0.10.2/nvim-linux64.tar.gz | tar xzf - --strip-components=1 -C "${PWD}/_neovim"
       - name: Run tests
         run: |
           export PATH="${PWD}/_neovim/bin:${PATH}"
