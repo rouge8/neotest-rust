@@ -1,22 +1,11 @@
 .PHONY: test clean
 
-test: deps/plenary.nvim deps/nvim-treesitter deps/nvim-treesitter/parser/rust.so deps/neotest
+test: deps/lazy.nvim
 	./scripts/test
 
-deps/plenary.nvim:
+deps/lazy.nvim:
 	mkdir -p deps
-	git clone --depth 1 https://github.com/nvim-lua/plenary.nvim.git $@
-
-deps/nvim-treesitter:
-	mkdir -p deps
-	git clone --depth 1 https://github.com/nvim-treesitter/nvim-treesitter.git $@
-
-deps/nvim-treesitter/parser/rust.so: deps/nvim-treesitter
-	nvim --headless -u tests/minimal_init.vim -c "TSInstallSync rust | quit"
-
-deps/neotest:
-	mkdir -p deps
-	git clone --depth 1 https://github.com/nvim-neotest/neotest $@
+	git clone --depth 1 https://github.com/folke/lazy.nvim.git $@
 
 clean:
-	rm -rf deps/plenary.nvim deps/nvim-treesitter deps/neotest
+	rm -rf deps/
