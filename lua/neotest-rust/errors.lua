@@ -8,7 +8,7 @@ function M.parse_errors(output)
         return {}
     end
 
-    local message, line = output:match("thread '[^']+' panicked at '([^']+)', [^:]+:(%d+):%d+")
+    local line, message = output:match("thread '[^']+' panicked at [^:]+:(%d+):%d+:\n(.*)note:.*")
 
     -- If we can't parse the output, return an empty table
     if message == nil then

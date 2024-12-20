@@ -26,7 +26,7 @@ describe("discover_positions", function()
                 id = vim.loop.cwd() .. "/tests/data/simple-package/src/main.rs",
                 name = "main.rs",
                 path = vim.loop.cwd() .. "/tests/data/simple-package/src/main.rs",
-                range = { 0, 0, 26, 0 },
+                range = { 0, 0, 27, 0 },
                 type = "file",
             },
             {
@@ -34,7 +34,7 @@ describe("discover_positions", function()
                     id = "tests",
                     name = "tests",
                     path = vim.loop.cwd() .. "/tests/data/simple-package/src/main.rs",
-                    range = { 8, 0, 25, 1 },
+                    range = { 9, 0, 26, 1 },
                     type = "namespace",
                 },
                 {
@@ -42,7 +42,7 @@ describe("discover_positions", function()
                         id = "tests::basic_math",
                         name = "basic_math",
                         path = vim.loop.cwd() .. "/tests/data/simple-package/src/main.rs",
-                        range = { 10, 4, 12, 5 },
+                        range = { 11, 4, 13, 5 },
                         type = "test",
                     },
                 },
@@ -51,7 +51,7 @@ describe("discover_positions", function()
                         id = "tests::failed_math",
                         name = "failed_math",
                         path = vim.loop.cwd() .. "/tests/data/simple-package/src/main.rs",
-                        range = { 15, 4, 17, 5 },
+                        range = { 16, 4, 18, 5 },
                         type = "test",
                     },
                 },
@@ -60,7 +60,7 @@ describe("discover_positions", function()
                         id = "tests::nested",
                         name = "nested",
                         path = vim.loop.cwd() .. "/tests/data/simple-package/src/main.rs",
-                        range = { 19, 4, 24, 5 },
+                        range = { 20, 4, 25, 5 },
                         type = "namespace",
                     },
                     {
@@ -68,7 +68,7 @@ describe("discover_positions", function()
                             id = "tests::nested::nested_math",
                             name = "nested_math",
                             path = vim.loop.cwd() .. "/tests/data/simple-package/src/main.rs",
-                            range = { 21, 8, 23, 9 },
+                            range = { 22, 8, 24, 9 },
                             type = "test",
                         },
                     },
@@ -468,6 +468,20 @@ describe("build_spec", function()
             assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/simple-package")
         end)
 
+        it("can run tests in other_mod/foo.rs", function()
+            local tree = Tree:new({
+                type = "file",
+                path = vim.loop.cwd() .. "/tests/data/simple-package/src/other_mod/foo.rs",
+                id = vim.loop.cwd() .. "/tests/data/simple-package/src/other_mod/foo.rs",
+            }, {}, function(data)
+                return data
+            end, {})
+
+            local spec = plugin.build_spec({ tree = tree })
+            assert.equal(spec.context.test_filter, "-E " .. vim.fn.shellescape("test(/^other_mod::foo::/)"))
+            assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/simple-package")
+        end)
+
         it("can run a single integration test", function()
             local tree = Tree:new({
                 type = "test",
@@ -800,6 +814,23 @@ describe("build_spec", function()
                 assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/simple-package")
             end)
 
+            async.it("can debug tests in other_mod/foo.rs", function()
+                local tree = Tree:new({
+                    type = "file",
+                    path = vim.loop.cwd() .. "/tests/data/simple-package/src/other_mod/foo.rs",
+                    id = vim.loop.cwd() .. "/tests/data/simple-package/src/other_mod/foo.rs",
+                }, {}, function(data)
+                    return data
+                end, {})
+
+                local spec = plugin.build_spec({ tree = tree, strategy = "dap" })
+                assert.are.same(spec.strategy.args, {
+                    "--nocapture",
+                    "other_mod::foo",
+                })
+                assert.equal(spec.cwd, vim.loop.cwd() .. "/tests/data/simple-package")
+            end)
+
             async.it("can debug a single integration test", function()
                 local tree = Tree:new({
                     type = "test",
@@ -991,12 +1022,12 @@ describe("results", function()
 
         local expected = {
             ["foo::tests::should_fail"] = {
-                short = "thread 'foo::tests::should_fail' panicked at 'assertion failed: false', src/foo.rs:10:9\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
+                short = "thread 'foo::tests::should_fail' panicked at src/foo.rs:10:9:\nassertion failed: false\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
                 status = "failed",
                 errors = {
                     {
                         line = 9,
-                        message = "assertion failed: false",
+                        message = "assertion failed: false\n",
                     },
                 },
             },
@@ -1049,17 +1080,17 @@ describe("results", function()
 
         local expected = {
             ["foo::tests::should_fail"] = {
-                short = "thread 'foo::tests::should_fail' panicked at 'assertion failed: false', src/foo.rs:10:9\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
+                short = "thread 'foo::tests::should_fail' panicked at src/foo.rs:10:9:\nassertion failed: false\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
                 status = "failed",
-                errors = { { line = 9, message = "assertion failed: false" } },
+                errors = { { line = 9, message = "assertion failed: false\n" } },
             },
             ["foo::tests::should_pass"] = {
                 status = "passed",
             },
             should_fail = {
-                short = "thread 'should_fail' panicked at 'assertion failed: false', tests/tests.rs:8:5\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
+                short = "thread 'should_fail' panicked at tests/tests.rs:8:5:\nassertion failed: false\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
                 status = "failed",
-                errors = { { line = 7, message = "assertion failed: false" } },
+                errors = { { line = 7, message = "assertion failed: false\n" } },
             },
             should_pass = {
                 status = "passed",

@@ -1,0 +1,3 @@
+[tools]
+"cargo:cargo-nextest" = "latest"
+neovim = "latest"

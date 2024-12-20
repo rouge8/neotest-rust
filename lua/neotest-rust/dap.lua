@@ -4,6 +4,8 @@ local util = require("neotest-rust.util")
 
 local M = {}
 
+local has_quantified_captures = vim.fn.has("nvim-0.11.0") == 1
+
 --
 --{
 --  "target": {
@@ -56,7 +58,11 @@ local function collect(query, source, root)
         end
 
         if captured_nodes["mod_name"] then
-            local mod_name = vim.treesitter.get_node_text(captured_nodes["mod_name"], source)
+            local node = captured_nodes["mod_name"]
+            if has_quantified_captures then
+                node = node[#node]
+            end
+            local mod_name = vim.treesitter.get_node_text(node, source)
             table.insert(mods, mod_name)
         end
     end
@@ -82,7 +88,7 @@ end
 
 -- Determine if mod is in <mod_name>.rs or <mod_name>/mod.rs
 local function construct_mod_path(src_path, mod_name)
-    local match_str = "(.-)[^\\/]-%.?(%w+)%.?[^\\/]*$"
+    local match_str = "(.-)[^\\/]-%.?([%w_]+)%.?[^\\/]*$"
     local abs_path, parent_mod = string.match(src_path, match_str)
 
     local mod_file = abs_path .. mod_name .. ".rs"

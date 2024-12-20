@@ -45,7 +45,7 @@ function adapter.root(dir)
     local cwd = lib.files.match_root_pattern("Cargo.toml")(dir)
 
     if cwd == nil then
-        return
+        return vim.fs.root(0, "Cargo.toml")
     end
 
     return cargo_metadata(cwd).workspace_root
