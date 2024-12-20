@@ -1,4 +1,5 @@
 mod foo;
+mod multiple_macros;
 
 #[cfg(test)]
 mod tests {
