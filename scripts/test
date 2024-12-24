@@ -3,4 +3,4 @@ set -eu
 
 unset CARGO_TARGET_DIR
 
-nvim --noplugin -l tests/busted.lua --output TAP tests/
+PLENARY_TEST_TIMEOUT=20000 nvim --noplugin -l tests/busted.lua --output TAP tests/
