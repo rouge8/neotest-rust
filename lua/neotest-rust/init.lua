@@ -160,6 +160,10 @@ local function binary_name(path)
     return vim.split(path, "/")[1]
 end
 
+local function tbl_flatten(tbl)
+    return vim.fn.has("nvim-0.11") == 1 and vim.iter(tbl):flatten(math.huge):totable() or vim.tbl_flatten(tbl)
+end
+
 ---Given a file path, parse all the tests within it.
 ---@async
 ---@param path string Absolute file path
@@ -204,7 +208,7 @@ function adapter.discover_positions(path)
         require_namespaces = false,
         position_id = function(position, namespaces)
             return table.concat(
-                vim.tbl_flatten({
+                tbl_flatten({
                     path_to_test_path(path),
                     vim.tbl_map(function(pos)
                         return pos.name
@@ -234,7 +238,7 @@ function adapter.build_spec(args)
         writer:write("[profile.neotest.junit]\npath = '" .. junit_path .. "'")
     end)
 
-    local command = vim.tbl_flatten({
+    local command = tbl_flatten({
         "cargo",
         "nextest",
         "run",
